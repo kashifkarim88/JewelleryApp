@@ -1,7 +1,13 @@
+"use client"
 import React from 'react';
 import { LayoutDashboard, Box, FileText } from 'lucide-react';
 
-export default function DesktopSidebar({ activeTab, setActiveTab }) {
+interface SidebarProps {
+    activeTab: string;
+    setActiveTab: (tabName: string) => void;
+}
+
+export default function DesktopSidebar({ activeTab, setActiveTab }: SidebarProps) {
     const menuItems = [
         { name: 'Index', icon: <LayoutDashboard size={20} /> },
         { name: 'Stock', icon: <Box size={20} /> },
