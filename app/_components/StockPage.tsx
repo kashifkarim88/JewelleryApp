@@ -1,20 +1,29 @@
 "use client"
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, ChangeEvent, KeyboardEvent, RefObject } from 'react';
 import { Search, Package, Ruler, Hammer, Gem, Camera, X } from 'lucide-react';
 
-const DUMMY_ITEMS = [
+interface Item {
+    id: number;
+    name: string;
+    code: string;
+}
+
+const DUMMY_ITEMS: Item[] = [
     { id: 1, name: "Diamond Engagement Ring", code: "HJ-1001" },
     { id: 2, name: "Gold Bridal Set", code: "HJ-5502" },
     { id: 3, name: "Silver Bracelet", code: "HJ-3021" },
+    { id: 4, name: "Emerald Earrings", code: "HJ-9921" },
+    { id: 5, name: "Ruby Pendant", code: "HJ-4410" },
 ];
 
-const UNITS = ["Grams (g)", "Carat (ct)", "Pieces (pcs)", "Tola"];
+const UNITS: string[] = ["Grams (g)", "Carat (ct)", "Pieces (pcs)", "Tola"];
 
 export default function StockPage() {
-    const [searchTerm, setSearchTerm] = useState("");
-    const [selectedItem, setSelectedItem] = useState<{ name: string, code: string } | null>(null);
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const [selectedUnit, setSelectedUnit] = useState("");
+    // --- State ---
+    const [searchTerm, setSearchTerm] = useState<string>("");
+    const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+    const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+    const [selectedUnit, setSelectedUnit] = useState<string>("");
     const [imagePreview, setImagePreview] = useState<string | null>(null);
 
     const [vals, setVals] = useState({
@@ -24,6 +33,7 @@ export default function StockPage() {
         dWgt: "", dRate: ""
     });
 
+    // --- Production-Safe Typed Refs ---
     const dropdownRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const refWastage = useRef<HTMLInputElement>(null);
@@ -34,7 +44,7 @@ export default function StockPage() {
     const refDiamondWgt = useRef<HTMLInputElement>(null);
     const refDiamondRate = useRef<HTMLInputElement>(null);
 
-    // Bug Fix: Click outside to close dropdown
+    // --- Effects ---
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -52,22 +62,44 @@ export default function StockPage() {
         );
     }, [searchTerm]);
 
-    // Logic for 2-decimal jump
-    const handleDecimalInput = (key: string, value: string, nextRef?: React.RefObject<HTMLInputElement>) => {
+    // --- Production-Safe Input Handlers (Fixes ts 2345) ---
+    const handleDecimalInput = (
+        key: keyof typeof vals,
+        value: string,
+        nextRef?: RefObject<HTMLInputElement | null>
+    ) => {
+        // Prevent invalid characters for numbers
+        if (value !== "" && !/^\d*\.?\d*$/.test(value)) return;
+
         setVals(prev => ({ ...prev, [key]: value }));
+
+        // Auto-jump after 2 decimal places (e.g. 1.99)
         const decimalMatch = value.match(/\.\d{2}$/);
         if (decimalMatch && nextRef?.current) {
             nextRef.current.focus();
         }
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent, nextRef?: React.RefObject<HTMLInputElement>) => {
+    const handleKeyDown = (
+        e: KeyboardEvent<HTMLInputElement>,
+        nextRef?: RefObject<HTMLInputElement | null>
+    ) => {
         if (e.key === 'Enter' && nextRef?.current) {
             e.preventDefault();
             nextRef.current.focus();
         }
     };
 
+    const onFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => setImagePreview(reader.result as string);
+            reader.readAsDataURL(file);
+        }
+    };
+
+    // --- Calculations ---
     const stoneTotal = (Number(vals.sWgt) * Number(vals.sRate)).toFixed(2);
     const beadsTotal = (Number(vals.bWgt) * Number(vals.bRate)).toFixed(2);
     const diamondTotal = (Number(vals.dWgt) * Number(vals.dRate)).toFixed(2);
@@ -76,13 +108,13 @@ export default function StockPage() {
         <div className="h-full flex flex-col max-w-7xl mx-auto overflow-hidden">
             <div className="mb-4">
                 <h1 className='text-2xl font-bold text-gray-900 tracking-tight'>Inventory Entry</h1>
-                <p className='text-gray-500 text-xs font-medium'>Weight and Wastage auto-jump after 2 decimal places.</p>
+                <p className='text-gray-500 text-xs font-medium uppercase tracking-wider'>Production-Ready Build (v2.0)</p>
             </div>
 
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-y-auto lg:overflow-hidden flex flex-col">
                 <div className="p-4 md:p-6 space-y-5">
 
-                    {/* TOP SECTION: Search & Primary Details (Aligned) */}
+                    {/* TOP SECTION: Aligned Item Search, Unit, Worker, Code */}
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-end">
                         <div className="relative lg:col-span-1" ref={dropdownRef}>
                             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Item Search</label>
@@ -99,7 +131,12 @@ export default function StockPage() {
                                 {isDropdownOpen && (
                                     <div className="absolute z-50 w-full mt-1 bg-white border rounded-xl shadow-2xl max-h-40 overflow-y-auto">
                                         {filteredItems.map(item => (
-                                            <button key={item.id} onClick={() => { setSelectedItem(item); setSearchTerm(item.name); setIsDropdownOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm border-b last:border-0">
+                                            <button
+                                                key={item.id}
+                                                type="button"
+                                                onClick={() => { setSelectedItem(item); setSearchTerm(item.name); setIsDropdownOpen(false); }}
+                                                className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm border-b last:border-0"
+                                            >
                                                 <div className="font-medium">{item.name}</div>
                                                 <div className="text-[10px] text-gray-400 font-mono">{item.code}</div>
                                             </button>
@@ -110,14 +147,18 @@ export default function StockPage() {
                         </div>
 
                         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:col-span-3 items-end">
-                            <div>
+                            <div className="flex flex-col">
                                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Unit</label>
-                                <select value={selectedUnit} onChange={(e) => setSelectedUnit(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm outline-none bg-white h-[42px]">
+                                <select
+                                    value={selectedUnit}
+                                    onChange={(e) => setSelectedUnit(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm outline-none bg-white h-[42px]"
+                                >
                                     <option value="">Select Unit</option>
                                     {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                                 </select>
                             </div>
-                            <div>
+                            <div className="flex flex-col">
                                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Making (Worker)</label>
                                 <input
                                     type="text"
@@ -135,40 +176,33 @@ export default function StockPage() {
 
                     <hr className="border-gray-100" />
 
-                    {/* MIDDLE SECTION: Detail Grid */}
+                    {/* MIDDLE SECTION: 5-Column Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
 
-                        {/* 1. Image Upload Section */}
+                        {/* 1. Image Capture */}
                         <div className="p-3 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center min-h-[145px] relative">
                             {imagePreview ? (
                                 <div className="h-full w-full relative">
                                     <img src={imagePreview} alt="Preview" className="h-32 w-full object-cover rounded-lg" />
-                                    <button onClick={() => setImagePreview(null)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-md">
+                                    <button type="button" onClick={() => setImagePreview(null)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-md">
                                         <X size={14} />
                                     </button>
                                 </div>
                             ) : (
-                                <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center text-gray-400 hover:text-gray-600 transition-colors py-4">
+                                <button type="button" onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center text-gray-400 hover:text-gray-600 py-4">
                                     <Camera size={28} className="mb-2" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest">Capture Item</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-center">Add Photo</span>
                                 </button>
                             )}
-                            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" capture="environment" onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => setImagePreview(reader.result as string);
-                                    reader.readAsDataURL(file);
-                                }
-                            }} />
+                            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" capture="environment" onChange={onFileChange} />
                         </div>
 
-                        {/* 2. Weight Info */}
+                        {/* 2. Weight (Accepts 2 Decimals) */}
                         <div className="p-3 bg-gray-50 rounded-xl space-y-2">
                             <h3 className="text-[10px] font-black text-gray-400 uppercase flex items-center gap-1"><Ruler size={12} /> Weight</h3>
                             <input
                                 className='w-full p-2.5 text-xs rounded-lg border border-gray-200 focus:border-gray-900 outline-none'
-                                type="number" step="0.01" placeholder='Net Wgt (1.99)'
+                                type="number" step="0.01" placeholder='Net Wgt'
                                 value={vals.netWeight}
                                 onChange={(e) => handleDecimalInput('netWeight', e.target.value, refWastage)}
                                 onKeyDown={(e) => handleKeyDown(e, refWastage)}
@@ -183,7 +217,7 @@ export default function StockPage() {
                             />
                         </div>
 
-                        {/* 3. Stone Section */}
+                        {/* 3. Stone Section (Accepts 2 Decimals) */}
                         <div className="p-3 bg-blue-50/30 rounded-xl space-y-2 border border-blue-100">
                             <h3 className="text-[10px] font-black text-blue-400 uppercase flex items-center gap-1"><Gem size={12} /> Stone</h3>
                             <div className="grid grid-cols-2 gap-2">
@@ -209,7 +243,7 @@ export default function StockPage() {
                             </div>
                         </div>
 
-                        {/* 4. Beads Section */}
+                        {/* 4. Beads Section (Accepts 2 Decimals) */}
                         <div className="p-3 bg-gray-50 rounded-xl space-y-2">
                             <h3 className="text-[10px] font-black text-gray-400 uppercase flex items-center gap-1"><Package size={12} /> Beads</h3>
                             <div className="grid grid-cols-2 gap-2">
@@ -235,7 +269,7 @@ export default function StockPage() {
                             </div>
                         </div>
 
-                        {/* 5. Diamond Section */}
+                        {/* 5. Diamond Section (Accepts 2 Decimals) */}
                         <div className="p-3 bg-gray-50 rounded-xl space-y-2">
                             <h3 className="text-[10px] font-black text-gray-400 uppercase flex items-center gap-1"><Hammer size={12} /> Diamond</h3>
                             <div className="grid grid-cols-2 gap-2">
@@ -262,8 +296,10 @@ export default function StockPage() {
                         </div>
                     </div>
 
+                    {/* ACTION FOOTER */}
                     <div className="flex justify-center lg:justify-end border-t border-gray-50 pt-4">
                         <button
+                            type="button"
                             disabled={!selectedItem || !selectedUnit}
                             className="w-full lg:w-64 flex items-center justify-center gap-2 bg-gray-900 hover:bg-black disabled:bg-gray-100 disabled:text-gray-400 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] shadow-lg"
                         >
