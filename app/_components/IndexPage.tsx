@@ -4,99 +4,113 @@ import Barcode from 'react-barcode';
 import { PlusCircle, Tag, Package, Barcode as BarcodeIcon } from 'lucide-react';
 
 export default function IndexPage() {
+    const [itemCategory, setItemCategory] = useState("");
     const [itemCode, setItemCode] = useState("");
     const [itemName, setItemName] = useState("");
 
-    return (
-        // Added responsive padding and max-width
-        <div className="max-w-5xl mx-auto pb-10">
+    // Shared Preview Component to keep code clean
+    const BarcodePreview = ({ className = "" }) => (
+        <div className={`animate-in fade-in zoom-in duration-300 ${className}`}>
+            <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-6 flex flex-col items-center">
+                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-4">Tag Preview</h3>
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex flex-col items-center min-w-[180px]">
+                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">
+                        {itemCategory || 'Category'}
+                    </span>
+                    <span className="text-[11px] font-bold text-gray-800 mb-3 text-center truncate max-w-[150px]">
+                        {itemName || 'Item Name'}
+                    </span>
+                    <Barcode
+                        value={itemCode}
+                        width={1.1}
+                        height={40}
+                        fontSize={12}
+                        margin={0}
+                    />
+                </div>
+            </div>
+        </div>
+    );
 
-            {/* Page Header - Responsive text alignment */}
-            <div className="mb-6 md:mb-10 text-center md:text-left">
-                <h1 className="text-2xl md:text-4xl font-bold text-gray-900 tracking-tight">
-                    Add New Inventory
-                </h1>
-                <p className="text-gray-500 mt-2 text-sm md:text-base">
-                    Register and generate barcodes for new jewellery stock.
-                </p>
+    return (
+        <div className="max-w-5xl mx-auto px-6 py-8 md:py-16 antialiased">
+
+            <div className="mb-8">
+                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Add Inventory</h1>
+                <p className="text-gray-500 text-sm">Register new stock and generate labels.</p>
             </div>
 
-            {/* Main Responsive Grid: 1 column on mobile, 3 columns on large screens */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
 
-                {/* FORM SECTION (Takes 2/3 of space on Desktop) */}
-                <div className="lg:col-span-2 order-2 lg:order-1">
-                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 md:p-8">
-                        <div className="space-y-5 md:space-y-6">
-                            {/* Item Name */}
-                            <div>
-                                <label className="block text-xs md:text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                    <Package size={16} className="text-gray-400" /> ITEM NAME
-                                </label>
-                                <input
-                                    type="text"
-                                    value={itemName}
-                                    onChange={(e) => setItemName(e.target.value)}
-                                    placeholder="e.g. 22K Gold Necklace"
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-800 focus:border-transparent outline-none transition-all text-sm md:text-base"
-                                />
-                            </div>
+                {/* FORM SECTION */}
+                <div className="lg:col-span-7">
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
 
-                            {/* Item Code */}
-                            <div>
-                                <label className="block text-xs md:text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                    <Tag size={16} className="text-gray-400" /> ITEM CODE
-                                </label>
-                                <input
-                                    type="text"
-                                    value={itemCode}
-                                    onChange={(e) => setItemCode(e.target.value.toUpperCase())}
-                                    placeholder="e.g. HJ-9921"
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-gray-800 focus:border-transparent outline-none transition-all font-mono text-sm md:text-base"
-                                />
-                            </div>
-
-                            {/* Action Button */}
-                            <button className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-black text-white font-bold py-3.5 md:py-4 rounded-xl transition-all shadow-md active:scale-95 text-sm md:text-base">
-                                <PlusCircle size={20} /> Add Item to Stock
-                            </button>
+                        {/* 1. Item Category */}
+                        <div>
+                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 flex items-center gap-2 tracking-wider">
+                                <Package size={12} /> Item Category
+                            </label>
+                            <input
+                                type="text"
+                                value={itemCategory}
+                                onChange={(e) => setItemCategory(e.target.value)}
+                                placeholder="e.g. Necklace"
+                                className="w-full px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-gray-900 outline-none transition-all text-sm"
+                            />
                         </div>
+
+                        {/* 2. Item Name */}
+                        <div>
+                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 flex items-center gap-2 tracking-wider">
+                                <Package size={12} /> Item Name
+                            </label>
+                            <input
+                                type="text"
+                                value={itemName}
+                                onChange={(e) => setItemName(e.target.value)}
+                                placeholder="e.g. 22K Gold Diamond Band"
+                                className="w-full px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-gray-900 outline-none transition-all text-sm"
+                            />
+                        </div>
+
+                        {/* 3. Item Code */}
+                        <div>
+                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 flex items-center gap-2 tracking-wider">
+                                <Tag size={12} /> Item Code
+                            </label>
+                            <input
+                                type="text"
+                                value={itemCode}
+                                onChange={(e) => setItemCode(e.target.value.toUpperCase())}
+                                placeholder="HJ-9921"
+                                className="w-full px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-gray-900 outline-none transition-all font-mono text-sm"
+                            />
+                        </div>
+
+                        {/* MOBILE PREVIEW: Visible only on mobile/tablet (below lg) when itemCode exists */}
+                        {itemCode && (
+                            <div className="lg:hidden mt-4">
+                                <BarcodePreview />
+                            </div>
+                        )}
+
+                        <button className="w-full mt-2 flex items-center justify-center gap-2 bg-gray-900 hover:bg-black text-white font-semibold py-3 rounded-xl transition-all text-sm shadow-sm active:scale-[0.98]">
+                            <PlusCircle size={18} /> Add to Stock
+                        </button>
                     </div>
                 </div>
 
-                {/* PREVIEW SECTION (Fixed at top on mobile for instant feedback) */}
-                <div className="lg:col-span-1 order-1 lg:order-2">
-                    <div className="sticky top-4">
-                        <h3 className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-3 text-center lg:text-left">
-                            Live Label Preview
-                        </h3>
-                        <div className="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center min-h-[180px] md:min-h-[280px] text-center transition-all bg-white">
-                            {itemCode ? (
-                                <div className="flex flex-col items-center animate-in fade-in zoom-in duration-300">
-                                    <span className="text-[10px] font-black text-gray-400 mb-1 tracking-widest uppercase">
-                                        {itemName || 'Draft Item'}
-                                    </span>
-                                    <div className="p-2 bg-white rounded-lg shadow-sm border border-gray-100">
-                                        <Barcode
-                                            value={itemCode}
-                                            width={1.2}
-                                            height={50}
-                                            fontSize={12}
-                                            margin={10}
-                                        />
-                                    </div>
-                                    <p className="mt-4 text-[10px] text-gray-400 uppercase font-medium tracking-tighter">Scan to Verify</p>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center text-gray-300">
-                                    <div className="p-4 bg-gray-100 rounded-full mb-3">
-                                        <BarcodeIcon size={32} />
-                                    </div>
-                                    <p className="text-xs font-medium">Waiting for item code...</p>
-                                </div>
-                            )}
+                {/* DESKTOP PREVIEW: Visible only on large screens (lg) at the right-center */}
+                <div className="hidden lg:block lg:col-span-5">
+                    {itemCode ? (
+                        <BarcodePreview />
+                    ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-gray-300 border-2 border-dashed border-gray-100 rounded-2xl p-12">
+                            <BarcodeIcon size={40} className="mb-2 opacity-20" />
+                            <p className="text-[10px] uppercase font-bold tracking-widest">Waiting for Code</p>
                         </div>
-                    </div>
+                    )}
                 </div>
 
             </div>
