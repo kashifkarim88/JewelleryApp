@@ -1,6 +1,6 @@
 "use client"
 import React from 'react';
-import { LayoutDashboard, Box, FileText } from 'lucide-react';
+import { House, Box, FileText } from 'lucide-react';
 
 interface SidebarProps {
     activeTab: string;
@@ -9,7 +9,7 @@ interface SidebarProps {
 
 export default function DesktopSidebar({ activeTab, setActiveTab }: SidebarProps) {
     const menuItems = [
-        { name: 'Index', icon: <LayoutDashboard size={20} /> },
+        { name: 'House', icon: <House size={20} /> },
         { name: 'Stock', icon: <Box size={20} /> },
         { name: 'Invoice', icon: <FileText size={20} /> },
     ];

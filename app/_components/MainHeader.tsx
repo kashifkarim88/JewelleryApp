@@ -1,6 +1,6 @@
 "use client"
 import React, { useState } from 'react';
-import { Menu, X, LayoutDashboard, Box, FileText } from 'lucide-react';
+import { Menu, X, House, Box, FileText } from 'lucide-react';
 
 // Define what props this component accepts
 interface HeaderProps {
@@ -15,7 +15,7 @@ export default function MainHeader({ activeTab, setActiveTab }: HeaderProps) {
 
     // Update these to match your actual pages
     const navItems = [
-        { name: 'Index', icon: <LayoutDashboard size={20} /> },
+        { name: 'Home', icon: <House size={20} /> },
         { name: 'Stock', icon: <Box size={20} /> },
         { name: 'Invoice', icon: <FileText size={20} /> },
     ];
