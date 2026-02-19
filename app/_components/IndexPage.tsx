@@ -1,119 +1,77 @@
 "use client"
-import React, { useState } from 'react';
-import Barcode from 'react-barcode';
-import { PlusCircle, Tag, Package, Barcode as BarcodeIcon } from 'lucide-react';
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Diamond, Sparkles } from 'lucide-react';
 
 export default function IndexPage() {
-    const [itemCategory, setItemCategory] = useState("");
-    const [itemCode, setItemCode] = useState("");
-    const [itemName, setItemName] = useState("");
-
-    // Shared Preview Component to keep code clean
-    const BarcodePreview = ({ className = "" }) => (
-        <div className={`animate-in fade-in zoom-in duration-300 ${className}`}>
-            <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-6 flex flex-col items-center">
-                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-4">Tag Preview</h3>
-                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex flex-col items-center min-w-[180px]">
-                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">
-                        {itemCategory || 'Category'}
-                    </span>
-                    <span className="text-[11px] font-bold text-gray-800 mb-3 text-center truncate max-w-[150px]">
-                        {itemName || 'Item Name'}
-                    </span>
-                    <Barcode
-                        value={itemCode}
-                        width={1.1}
-                        height={40}
-                        fontSize={12}
-                        margin={0}
-                    />
-                </div>
-            </div>
-        </div>
-    );
-
     return (
-        <div className="max-w-5xl mx-auto px-6 py-8 md:py-16 antialiased">
+        <div className="min-h-[80vh] flex flex-col items-center justify-center relative px-6 py-12 bg-white selection:bg-amber-100">
 
-            <div className="mb-8">
-                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Add Inventory</h1>
-                <p className="text-gray-500 text-sm">Register new stock and generate labels.</p>
+            {/* Soft Light Background Accents */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-amber-50/60 blur-[100px] rounded-full" />
+                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-blue-50/50 blur-[100px] rounded-full" />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <div className="relative z-10 text-center max-w-3xl mx-auto">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className="mb-6 inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-50 to-white border border-amber-100 shadow-sm"
+                >
+                    <Diamond className="text-amber-500" size={28} strokeWidth={1.5} />
+                </motion.div>
 
-                {/* FORM SECTION */}
-                <div className="lg:col-span-7">
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+                <div className="space-y-2">
+                    <motion.div
+                        initial={{ opacity: 0, letterSpacing: "0.1em" }}
+                        animate={{ opacity: 1, letterSpacing: "0.4em" }}
+                        transition={{ duration: 1.2, delay: 0.2 }}
+                        className="flex items-center justify-center gap-2 text-amber-600 font-bold text-[10px] uppercase mb-2"
+                    >
+                        <Sparkles size={12} /> Exquisite Artistry
+                    </motion.div>
 
-                        {/* 1. Item Category */}
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 flex items-center gap-2 tracking-wider">
-                                <Package size={12} /> Item Category
-                            </label>
-                            <input
-                                type="text"
-                                value={itemCategory}
-                                onChange={(e) => setItemCategory(e.target.value)}
-                                placeholder="e.g. Necklace"
-                                className="w-full px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-gray-900 outline-none transition-all text-sm"
-                            />
-                        </div>
-
-                        {/* 2. Item Name */}
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 flex items-center gap-2 tracking-wider">
-                                <Package size={12} /> Item Name
-                            </label>
-                            <input
-                                type="text"
-                                value={itemName}
-                                onChange={(e) => setItemName(e.target.value)}
-                                placeholder="e.g. 22K Gold Diamond Band"
-                                className="w-full px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-gray-900 outline-none transition-all text-sm"
-                            />
-                        </div>
-
-                        {/* 3. Item Code */}
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 flex items-center gap-2 tracking-wider">
-                                <Tag size={12} /> Item Code
-                            </label>
-                            <input
-                                type="text"
-                                value={itemCode}
-                                onChange={(e) => setItemCode(e.target.value.toUpperCase())}
-                                placeholder="HJ-9921"
-                                className="w-full px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-100 focus:bg-white focus:ring-2 focus:ring-gray-900 outline-none transition-all font-mono text-sm"
-                            />
-                        </div>
-
-                        {/* MOBILE PREVIEW: Visible only on mobile/tablet (below lg) when itemCode exists */}
-                        {itemCode && (
-                            <div className="lg:hidden mt-4">
-                                <BarcodePreview />
-                            </div>
-                        )}
-
-                        <button className="w-full mt-2 flex items-center justify-center gap-2 bg-gray-900 hover:bg-black text-white font-semibold py-3 rounded-xl transition-all text-sm shadow-sm active:scale-[0.98]">
-                            <PlusCircle size={18} /> Add to Stock
-                        </button>
-                    </div>
+                    <motion.h1
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.4 }}
+                        className="text-4xl md:text-6xl font-bold text-slate-900 tracking-tight"
+                    >
+                        HAMMID ULLAH <br />
+                        <span className="font-light italic text-slate-500">JEWELLERY</span>
+                    </motion.h1>
                 </div>
 
-                {/* DESKTOP PREVIEW: Visible only on large screens (lg) at the right-center */}
-                <div className="hidden lg:block lg:col-span-5">
-                    {itemCode ? (
-                        <BarcodePreview />
-                    ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-gray-300 border-2 border-dashed border-gray-100 rounded-2xl p-12">
-                            <BarcodeIcon size={40} className="mb-2 opacity-20" />
-                            <p className="text-[10px] uppercase font-bold tracking-widest">Waiting for Code</p>
-                        </div>
-                    )}
-                </div>
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 1.5, delay: 0.8 }}
+                    className="mt-6 border-t border-slate-100 pt-6"
+                >
+                    <p className="text-slate-500 text-sm md:text-base font-medium leading-relaxed max-w-md mx-auto">
+                        Crafting timeless elegance and bespoke brilliance for over three decades.
+                        Your legacy, beautifully set in gold.
+                    </p>
+                </motion.div>
 
+                <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: "40px" }}
+                    transition={{ duration: 1, delay: 1.2 }}
+                    className="h-[2px] bg-amber-200 mx-auto mt-8"
+                />
             </div>
+
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 2 }}
+                className="mt-12 text-[9px] font-bold text-slate-300 uppercase tracking-[0.6em]"
+            >
+                Premium Standards Only
+            </motion.div>
         </div>
     );
 }
