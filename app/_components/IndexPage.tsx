@@ -39,7 +39,7 @@ export default function IndexPage() {
                         transition={{ duration: 0.8, delay: 0.4 }}
                         className="text-4xl md:text-6xl font-bold text-slate-900 tracking-tight"
                     >
-                        HAMMID ULLAH <br />
+                        HAMID ULLAH <br />
                         <span className="font-light italic text-slate-500">JEWELLERY</span>
                     </motion.h1>
                 </div>
