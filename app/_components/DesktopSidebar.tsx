@@ -9,7 +9,7 @@ interface SidebarProps {
 
 export default function DesktopSidebar({ activeTab, setActiveTab }: SidebarProps) {
     const menuItems = [
-        { name: 'House', icon: <House size={20} /> },
+        { name: 'Home', icon: <House size={20} /> },
         { name: 'Stock', icon: <Box size={20} /> },
         { name: 'Invoice', icon: <FileText size={20} /> },
     ];
