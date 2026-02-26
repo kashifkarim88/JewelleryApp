@@ -1,8 +1,46 @@
 "use client"
-import React from 'react';
-import { User, Phone, Hash, Plus, Briefcase } from 'lucide-react';
+import React, { useState } from "react";
+import { User, Phone, Hash, Plus, Briefcase } from "lucide-react";
 
 export default function WorkerForm() {
+    const [name, setName] = useState("");
+    const [phone, setPhone] = useState("");
+    const [code, setCode] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async () => {
+        try {
+            setLoading(true);
+
+            const res = await fetch("/api/workers", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    name,
+                    phone_number: phone,
+                    worker_code: code,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert(data.error);
+            } else {
+                alert("Worker added successfully!");
+                setName("");
+                setPhone("");
+                setCode("");
+            }
+        } catch (error) {
+            alert("Something went wrong");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="p-6 md:p-8 bg-white">
             <div className="mb-8">
@@ -10,38 +48,71 @@ export default function WorkerForm() {
                     <Briefcase size={20} className="text-blue-600" />
                     New Worker
                 </h2>
-                <p className="text-slate-500 text-xs font-medium mt-1">
-                    Register a new craftsman or worker to the system.
-                </p>
             </div>
 
             <div className="space-y-5">
-                <ModalInput label="Worker Name" icon={User} placeholder="Full Name" />
-                <ModalInput label="Contact Number" icon={Phone} placeholder="0334..." />
-                <ModalInput label="Worker Code" icon={Hash} placeholder="W-001" />
+                <ModalInput
+                    label="Worker Name"
+                    icon={User}
+                    placeholder="Full Name"
+                    value={name}
+                    onChange={setName}
+                />
+                <ModalInput
+                    label="Contact Number"
+                    icon={Phone}
+                    placeholder="0334..."
+                    value={phone}
+                    onChange={setPhone}
+                />
+                <ModalInput
+                    label="Worker Code"
+                    icon={Hash}
+                    placeholder="W-001"
+                    value={code}
+                    onChange={setCode}
+                />
             </div>
 
-            <button className="w-full mt-8 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-xl shadow-blue-100">
-                <Plus size={18} strokeWidth={3} />
-                <span className="text-sm uppercase tracking-widest">Register Worker</span>
+            <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="w-full mt-8 bg-blue-600 text-white font-bold py-4 rounded-2xl"
+            >
+                {loading ? "Adding..." : "Register Worker"}
             </button>
         </div>
     );
 }
 
-// Sub-component for inputs
-function ModalInput({ label, icon: Icon, placeholder }: { label: string; icon: any; placeholder: string }) {
+function ModalInput({
+    label,
+    icon: Icon,
+    placeholder,
+    value,
+    onChange,
+}: {
+    label: string;
+    icon: any;
+    placeholder: string;
+    value: string;
+    onChange: (val: string) => void;
+}) {
     return (
         <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{label}</label>
-            <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                {label}
+            </label>
+            <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                     <Icon size={16} />
                 </div>
                 <input
                     type="text"
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
                     placeholder={placeholder}
-                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none text-sm font-medium focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all"
+                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border rounded-2xl"
                 />
             </div>
         </div>
