@@ -4,25 +4,16 @@ import { PrismaNeon } from '@prisma/adapter-neon'
 import { Pool, neonConfig } from '@neondatabase/serverless'
 
 const prismaClientSingleton = () => {
-    // 1. Get the URL
     const connectionString = process.env.DATABASE_URL
 
-    // 2. If no URL (Building), return a plain client so Next.js doesn't crash
     if (!connectionString) {
+        // During build, return null or a mock
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error('DATABASE_URL is not set')
+        }
+        // For development/build, return a mock or throw
         return new PrismaClient()
     }
-
-    // 3. Setup WebSocket for Neon (Server-only)
-    if (typeof window === 'undefined') {
-        neonConfig.webSocketConstructor = ws
-    }
-
-    // 4. Create the connection
-    const pool = new Pool({ connectionString })
-    const adapter = new PrismaNeon(pool as any)
-
-    // 5. IMPORTANT: You MUST pass the adapter here
-    return new PrismaClient({ adapter })
 }
 
 const globalForPrisma = globalThis as unknown as {
