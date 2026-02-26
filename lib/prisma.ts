@@ -1,46 +1,70 @@
-import ws from 'ws'
 import { PrismaClient } from '@prisma/client'
-import { PrismaNeon } from '@prisma/adapter-neon'
-import { Pool, neonConfig } from '@neondatabase/serverless'
 
+// Create a function to get the PrismaClient
 const prismaClientSingleton = () => {
-    // 1. Get the URL
-    const connectionString = process.env.DATABASE_URL
+    // Check if we're in a build environment
+    const isBuild = process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL;
 
-    // 2. If no URL (during build), create a mock connection for build purposes
-    if (!connectionString) {
-        console.warn('DATABASE_URL not found, using mock PrismaClient for build')
-        // Create a minimal PrismaClient that won't actually connect
-        // This allows the build to complete
-        return new PrismaClient({
-            datasources: {
-                db: {
-                    url: 'postgresql://dummy:dummy@localhost:5432/dummy'
+    if (isBuild) {
+        // During build, return a mock that won't actually connect
+        console.log('🛠️ Build environment detected - using mock PrismaClient');
+
+        // Return a proxy that intercepts any method calls during build
+        return new Proxy({} as PrismaClient, {
+            get: (target, prop) => {
+                if (prop === 'worker' || prop === '$connect' || prop === '$disconnect') {
+                    return new Proxy({} as any, {
+                        get: () => {
+                            // During build, return a function that doesn't do anything
+                            return async () => {
+                                console.log(`🛠️ Build-time mock: ${String(prop)} called`);
+                                return null;
+                            };
+                        }
+                    });
                 }
+                return undefined;
             }
-        })
+        }) as PrismaClient;
     }
 
-    // 3. Setup WebSocket for Neon (Server-only)
-    if (typeof window === 'undefined') {
-        neonConfig.webSocketConstructor = ws
+    // Normal runtime - use Neon adapter
+    try {
+        // Dynamically import Neon dependencies only at runtime
+        const { PrismaNeon } = require('@prisma/adapter-neon');
+        const { Pool, neonConfig } = require('@neondatabase/serverless');
+        const ws = require('ws');
+
+        const connectionString = process.env.DATABASE_URL;
+
+        if (!connectionString) {
+            throw new Error('DATABASE_URL is not set');
+        }
+
+        // Setup WebSocket for Neon
+        if (typeof window === 'undefined') {
+            neonConfig.webSocketConstructor = ws;
+        }
+
+        const pool = new Pool({ connectionString });
+        const adapter = new PrismaNeon(pool);
+
+        return new PrismaClient({ adapter });
+    } catch (error) {
+        console.error('Failed to initialize database connection:', error);
+        throw error;
     }
-
-    // 4. Create the connection
-    const pool = new Pool({ connectionString })
-    const adapter = new PrismaNeon(pool as any)
-
-    // 5. Return the actual client with adapter
-    return new PrismaClient({ adapter })
 }
 
+// Use global for hot reloading
 const globalForPrisma = globalThis as unknown as {
-    prisma: PrismaClient | undefined
+    prisma: PrismaClient | undefined;
+};
+
+export const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
+
+if (process.env.NODE_ENV !== 'production') {
+    globalForPrisma.prisma = prisma;
 }
 
-// Ensure we don't recreate the client on every hot reload
-const prisma = globalForPrisma.prisma ?? prismaClientSingleton()
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
-
-export default prisma
+export default prisma;
