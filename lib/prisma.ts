@@ -17,7 +17,7 @@ const prismaClientSingleton = () => {
 
     // 2. Setup the Pool and Adapter
     const pool = new Pool({ connectionString })
-    const adapter = new PrismaNeon(pool)
+    const adapter = new PrismaNeon(pool as any)
 
     // 3. Return the client with the adapter explicitly passed
     // This tells Prisma NOT to look for a local database
