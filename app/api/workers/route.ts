@@ -9,14 +9,9 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { name, phone_number, worker_code } = body;
 
-        // Log environment (but don't log the actual URL for security)
-        console.log('Environment Check:', {
-            hasDbUrl: !!process.env.DATABASE_URL,
-            nodeEnv: process.env.NODE_ENV,
-            urlPrefix: process.env.DATABASE_URL ?
-                process.env.DATABASE_URL.substring(0, 15) + '...' : 'none'
-        });
+        console.log('🔍 Request received:', { name, phone_number, worker_code });
 
+        // Validation
         if (!name || !phone_number || !worker_code) {
             return NextResponse.json(
                 { error: "All fields are required" },
@@ -24,14 +19,24 @@ export async function POST(req: Request) {
             );
         }
 
-        // Check if we're in a build mock situation
-        if (!process.env.DATABASE_URL) {
-            return NextResponse.json({
-                message: "Build mode - this is a mock response",
-                data: { name, phone_number, worker_code }
-            }, { status: 200 });
+        // Check if worker with same phone or code already exists
+        const existingWorker = await prisma.worker.findFirst({
+            where: {
+                OR: [
+                    { phone_number },
+                    { worker_code }
+                ]
+            }
+        });
+
+        if (existingWorker) {
+            return NextResponse.json(
+                { error: "Worker with this phone number or code already exists" },
+                { status: 400 }
+            );
         }
 
+        // Create new worker
         const worker = await prisma.worker.create({
             data: {
                 name,
@@ -40,11 +45,45 @@ export async function POST(req: Request) {
             },
         });
 
+        console.log('✅ Worker created:', worker);
         return NextResponse.json(worker, { status: 201 });
+
     } catch (error: any) {
-        console.error('API Error:', error);
+        console.error('❌ Error details:', {
+            message: error.message,
+            code: error.code,
+            meta: error.meta
+        });
+
+        // Handle Prisma-specific errors
+        if (error.code === 'P2002') {
+            return NextResponse.json(
+                { error: "A worker with this phone number or code already exists" },
+                { status: 400 }
+            );
+        }
+
         return NextResponse.json(
-            { error: error.message || "Something went wrong" },
+            { error: "Failed to create worker. Please try again." },
+            { status: 500 }
+        );
+    }
+}
+
+// Optional: Add GET endpoint to fetch workers
+export async function GET() {
+    try {
+        const workers = await prisma.worker.findMany({
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+
+        return NextResponse.json(workers);
+    } catch (error) {
+        console.error('Error fetching workers:', error);
+        return NextResponse.json(
+            { error: "Failed to fetch workers" },
             { status: 500 }
         );
     }

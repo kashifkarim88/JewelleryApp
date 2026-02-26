@@ -7,10 +7,12 @@ export default function WorkerForm() {
     const [phone, setPhone] = useState("");
     const [code, setCode] = useState("");
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
     const handleSubmit = async () => {
         try {
             setLoading(true);
+            setError("");
 
             const res = await fetch("/api/workers", {
                 method: "POST",
@@ -27,7 +29,7 @@ export default function WorkerForm() {
             const data = await res.json();
 
             if (!res.ok) {
-                alert(data.error);
+                setError(data.error || "Something went wrong");
             } else {
                 alert("Worker added successfully!");
                 setName("");
@@ -35,7 +37,7 @@ export default function WorkerForm() {
                 setCode("");
             }
         } catch (error) {
-            alert("Something went wrong");
+            setError("Network error. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -49,6 +51,12 @@ export default function WorkerForm() {
                     New Worker
                 </h2>
             </div>
+
+            {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm">
+                    {error}
+                </div>
+            )}
 
             <div className="space-y-5">
                 <ModalInput
@@ -77,7 +85,7 @@ export default function WorkerForm() {
             <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="w-full mt-8 bg-blue-600 text-white font-bold py-4 rounded-2xl"
+                className="w-full mt-8 bg-blue-600 text-white font-bold py-4 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 {loading ? "Adding..." : "Register Worker"}
             </button>
@@ -112,7 +120,7 @@ function ModalInput({
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder={placeholder}
-                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border rounded-2xl"
+                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
             </div>
         </div>
