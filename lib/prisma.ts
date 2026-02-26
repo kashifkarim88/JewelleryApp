@@ -3,28 +3,25 @@ import { PrismaClient } from '@prisma/client'
 import { PrismaNeon } from '@prisma/adapter-neon'
 import { Pool, neonConfig } from '@neondatabase/serverless'
 
-// 1. Mandatory WebSocket setup for Neon Serverless
-if (typeof window === 'undefined') {
-    neonConfig.webSocketConstructor = ws
-}
-
 const prismaClientSingleton = () => {
     const connectionString = process.env.DATABASE_URL
 
+    // If the URL is missing during BUILD, we return a standard client.
+    // This allows the Next.js build to finish.
     if (!connectionString) {
-        throw new Error("❌ DATABASE_URL is missing from environment variables.")
+        return new PrismaClient()
     }
 
-    // 2. Setup the Pool and Adapter
+    if (typeof window === 'undefined') {
+        neonConfig.webSocketConstructor = ws
+    }
+
     const pool = new Pool({ connectionString })
     const adapter = new PrismaNeon(pool as any)
 
-    // 3. Return the client with the adapter explicitly passed
-    // This tells Prisma NOT to look for a local database
     return new PrismaClient({ adapter })
 }
 
-// 4. Singleton pattern for Next.js Fast Refresh
 const globalForPrisma = globalThis as unknown as {
     prisma: PrismaClient | undefined
 }

@@ -1,4 +1,6 @@
-export const runtime = 'nodejs'; // Add this line
+export const dynamic = 'force-dynamic'; // Add this line
+export const runtime = 'nodejs';
+
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
