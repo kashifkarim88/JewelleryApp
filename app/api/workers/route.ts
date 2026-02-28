@@ -70,20 +70,37 @@ export async function POST(req: Request) {
     }
 }
 
-// Optional: Add GET endpoint to fetch workers
 export async function GET() {
     try {
         const workers = await prisma.worker.findMany({
+            // 1. Fetch only the fields used by the UI to reduce payload size
+            select: {
+                id: true,
+                name: true,
+                worker_code: true,
+            },
+            // 2. Consistent sorting for a predictable UI
             orderBy: {
-                createdAt: 'desc'
-            }
+                name: 'asc',
+            },
         });
 
-        return NextResponse.json(workers);
+        // 3. Response with Performance Headers
+        return NextResponse.json(workers, {
+            status: 200,
+            headers: {
+                // Cache for 5 seconds, allowing background refresh (SWR)
+                'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=30',
+            },
+        });
+
     } catch (error) {
-        console.error('Error fetching workers:', error);
+        // 4. Server-side logging for debugging
+        console.error('[WORKER_GET_ERROR]:', error);
+
+        // 5. Clean error response
         return NextResponse.json(
-            { error: "Failed to fetch workers" },
+            { error: "Internal Server Error" },
             { status: 500 }
         );
     }
