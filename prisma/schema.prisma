@@ -27,3 +27,64 @@ model Category{
   updatedAt    DateTime @updatedAt
 }
 
+model StockItem {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  
+  // Core Fields
+  itemCode        String @unique
+  metal           String   // Gold, Silver, etc.
+  carat           String?  // 21K, 18K, etc.
+  categoryName    String
+  productCode     String
+  description     String?
+  workerName      String
+  
+  // Measurements
+  netWeight       Float
+  wastageGram     Float
+  wastagePercent  Float
+  making          Float
+  imageUrl        String?
+
+  // Optional Detail Sections
+  stoneDetails    StoneDetail?
+  beadDetails     BeadDetail?
+  diamondDetails  DiamondDetail?
+}
+
+model StoneDetail {
+  id          String    @id @default(cuid())
+  name        String?
+  weight      Float?
+  price       Float?
+  
+  // Relation back to StockItem
+  stockItemId String    @unique
+  stockItem   StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
+}
+
+model BeadDetail {
+  id          String    @id @default(cuid())
+  weight      Float?
+  price       Float?
+  
+  // Relation back to StockItem
+  stockItemId String    @unique
+  stockItem   StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
+}
+
+model DiamondDetail {
+  id          String    @id @default(cuid())
+  name        String?
+  weight      Float?
+  color       String?
+  cut         String?
+  clarity     String?
+  rate        Float?
+  price       Float?
+  
+  // Relation back to StockItem
+  stockItemId String    @unique
+  stockItem   StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
+}
