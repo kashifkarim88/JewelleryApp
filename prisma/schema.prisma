@@ -30,11 +30,11 @@ model Category{
 model StockItem {
   id              String   @id @default(cuid())
   createdAt       DateTime @default(now())
-  
   // Core Fields
   itemCode        String @unique
-  metal           String   // Gold, Silver, etc.
-  carat           String?  // 21K, 18K, etc.
+  metal           String   // Gold, Silver, Palladium, etc.
+  carat           String?  // 21K, 18K (Mainly for Gold)
+  purity          Float?   // Added for Palladium purity % (e.g., 95.0)
   categoryName    String
   productCode     String
   description     String?

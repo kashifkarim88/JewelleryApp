@@ -19,6 +19,7 @@ export async function POST(req: Request) {
                     itemCode: body.itemCode,
                     metal: body.metal,
                     carat: body.carat,
+                    purity: body.purity ? parseFloat(body.purity) : null, // Added Purity handling
                     categoryName: body.categoryName,
                     productCode: body.productCode,
                     description: body.description,

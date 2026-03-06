@@ -28,7 +28,12 @@ export function useStockLogic() {
     const [errors, setErrors] = useState<{ cat?: boolean; weight?: boolean }>({});
 
     const [vals, setVals] = useState({
-        worker: "", making: "", netWeight: "", WastageGram: "", wastage: "",
+        worker: "",
+        making: "",
+        netWeight: "",
+        WastageGram: "",
+        wastage: "",
+        palladiumPercentage: "",
         sName: "", sWgt: "", sPrice: "",
         bWgt: "", bPrice: "",
         dName: "", dWgt: "", dColor: "", dCut: "", dClarity: "", dRate: "", dPrice: ""
@@ -118,18 +123,45 @@ export function useStockLogic() {
         setIsSubmitting(true);
         try {
             const payload = {
-                itemCode: nextItemCode, metal: selectedMetal, carat: selectedMetal === "Gold" ? selectedCarat : null,
-                categoryName: catSearch, productCode: prodCode, description: prodDescription, workerName: vals.worker,
-                netWeight: vals.netWeight, wastageGram: vals.WastageGram, wastagePercent: vals.wastage, making: vals.making, imageUrl: imagePreview,
+                itemCode: nextItemCode,
+                metal: selectedMetal,
+                carat: selectedMetal === "Gold" ? selectedCarat : null,
+                // UPDATED: Mapping palladiumPercentage state to 'purity' field for API
+                purity: selectedMetal === "Palladium" ? vals.palladiumPercentage : null,
+                categoryName: catSearch,
+                productCode: prodCode,
+                description: prodDescription,
+                workerName: vals.worker,
+                netWeight: vals.netWeight,
+                wastageGram: vals.WastageGram,
+                wastagePercent: vals.wastage,
+                making: vals.making,
+                imageUrl: imagePreview,
                 stoneData: isStoneDirty ? { name: vals.sName, weight: vals.sWgt, price: vals.sPrice } : null,
                 beadData: isBeadsDirty ? { weight: vals.bWgt, price: vals.bPrice } : null,
                 diamondData: isDiamondDirty ? { name: vals.dName, weight: vals.dWgt, color: vals.dColor, cut: vals.dCut, clarity: vals.dClarity, rate: vals.dRate, price: vals.dPrice } : null,
             };
-            const res = await fetch('/api/stocks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+
+            const res = await fetch('/api/stocks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
             if (res.ok) {
                 alert("Inventory Updated Successfully!");
-                setVals({ worker: "", making: "", netWeight: "", WastageGram: "", wastage: "", sName: "", sWgt: "", sPrice: "", bWgt: "", bPrice: "", dName: "", dWgt: "", dColor: "", dCut: "", dClarity: "", dRate: "", dPrice: "" });
-                setProdDescription(""); setImagePreview(null); setCatSearch(""); setProdCode(""); setErrors({}); fetchNextCode();
+                setVals({
+                    worker: "", making: "", netWeight: "", WastageGram: "", wastage: "",
+                    palladiumPercentage: "",
+                    sName: "", sWgt: "", sPrice: "", bWgt: "", bPrice: "",
+                    dName: "", dWgt: "", dColor: "", dCut: "", dClarity: "", dRate: "", dPrice: ""
+                });
+                setProdDescription("");
+                setImagePreview(null);
+                setCatSearch("");
+                setProdCode("");
+                setErrors({});
+                fetchNextCode();
             }
         } finally { setIsSubmitting(false); }
     };
