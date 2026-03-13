@@ -61,14 +61,19 @@ export function useStockLogic() {
         if (vals.netWeight && errors.weight) setErrors(prev => ({ ...prev, weight: false }));
     }, [vals.netWeight, errors.weight]);
 
-    const fetchNextCode = async () => {
+    const fetchNextCode = async (prefix: string) => {
+        if (!prefix) return;
         try {
-            const res = await fetch('/api/stocks/next-code');
+            setNextItemCode("Generating...");
+            const res = await fetch(`/api/stocks/next-code?prefix=${prefix}`);
             if (res.ok) {
                 const data = await res.json();
                 setNextItemCode(data.nextCode);
             }
-        } catch (err) { console.error(err); }
+        } catch (err) {
+            console.error(err);
+            setNextItemCode("Error");
+        }
     };
 
     const fetchCategories = async () => {
@@ -91,7 +96,6 @@ export function useStockLogic() {
         setMounted(true);
         fetchCategories();
         fetchWorkers();
-        fetchNextCode();
         const handleClickOutside = (event: MouseEvent) => {
             if (refs.catRef.current && !refs.catRef.current.contains(event.target as Node)) setIsCatOpen(false);
             if (refs.workerRef.current && !refs.workerRef.current.contains(event.target as Node)) setIsWorkerOpen(false);
@@ -161,10 +165,17 @@ export function useStockLogic() {
                 setCatSearch("");
                 setProdCode("");
                 setErrors({});
-                fetchNextCode();
             }
         } finally { setIsSubmitting(false); }
     };
+
+    useEffect(() => {
+        if (prodCode) {
+            fetchNextCode(prodCode);
+        } else {
+            setNextItemCode("Select Category");
+        }
+    }, [prodCode]);
 
     return {
         mounted, nextItemCode, selectedMetal, setSelectedMetal, selectedCarat, setSelectedCarat,
