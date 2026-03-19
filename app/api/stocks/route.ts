@@ -80,3 +80,31 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
+
+export async function GET(request: Request) {
+    const { searchParams } = new URL(request.url);
+    const itemCode = searchParams.get("itemCode");
+
+    if (!itemCode) {
+        return NextResponse.json({ error: "Item code is required" }, { status: 400 });
+    }
+
+    try {
+        const item = await prisma.stockItem.findUnique({
+            where: { itemCode: itemCode },
+            include: {
+                stoneDetails: true,
+                beadDetails: true,
+                diamondDetails: true,
+            },
+        });
+
+        if (!item) {
+            return NextResponse.json({ error: "Item not found" }, { status: 404 });
+        }
+
+        return NextResponse.json(item);
+    } catch (error) {
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    }
+}
