@@ -6,13 +6,40 @@ import {
 } from 'lucide-react';
 import { PrintInvoice } from './PrintInvoice';
 
+// 1. Defined Interfaces for type safety
+interface DetailSection {
+    id?: string;
+    name?: string;
+    weight?: number;
+    price?: number;
+    color?: string;
+    clarity?: string;
+    cut?: string;
+    rate?: number;
+}
+
+interface CartItem {
+    id: string;
+    itemCode: string;
+    categoryName: string;
+    carat: string;
+    metal: string;
+    netWeight: number;
+    wastagePercent: number;
+    making: number;
+    imageUrl?: string;
+    diamondDetails?: DetailSection;
+    stoneDetails?: DetailSection;
+    beadDetails?: DetailSection;
+}
+
 export default function BillingPage() {
     const [customer, setCustomer] = useState({ name: '', phone: '' });
     const [goldRate, setGoldRate] = useState<number>(245000);
     const [discount, setDiscount] = useState<number>(0);
     const [itemInput, setItemInput] = useState("");
     const [isFetching, setIsFetching] = useState(false);
-    const [cart, setCart] = useState<any[]>([]);
+    const [cart, setCart] = useState<CartItem[]>([]); // Typed state
 
     const handlePrint = () => {
         if (cart.length === 0) return alert("Cart is empty");
@@ -35,18 +62,20 @@ export default function BillingPage() {
         } finally { setIsFetching(false); }
     };
 
-    const updateItemDetail = (index: number, section: string, field: string, value: any) => {
+    const updateItemDetail = (index: number, section: string, field: string, value: string | number) => {
         const newCart = [...cart];
         if (section === 'root') {
-            newCart[index][field] = value;
+            (newCart[index] as any)[field] = value;
         } else {
-            newCart[index][section] = { ...newCart[index][section], [field]: value };
+            const targetSection = (newCart[index] as any)[section];
+            if (targetSection) {
+                (newCart[index] as any)[section] = { ...targetSection, [field]: value };
+            }
         }
         setCart(newCart);
     };
 
-    const calculateItemPrice = (item: any) => {
-        if (!item) return 0;
+    const calculateItemPrice = (item: CartItem) => {
         const ratePerGram = (goldRate || 0) / 11.664;
         const metalValue = (Number(item.netWeight) || 0) * ratePerGram;
         return metalValue +
@@ -71,12 +100,11 @@ export default function BillingPage() {
             <div className="print:hidden min-h-screen bg-[#FBFBFC] p-4 md:p-8 text-slate-900 antialiased font-sans">
                 <div className="max-w-7xl mx-auto space-y-6">
 
-                    {/* Top Control Section */}
                     <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 space-y-6">
                         <div className="flex flex-col lg:flex-row gap-6 items-end">
                             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                                <InputGroup label="Customer Name" icon={User} value={customer.name} onChange={(v: any) => setCustomer({ ...customer, name: v })} placeholder="Enter Name" />
-                                <InputGroup label="Phone Number" icon={Phone} value={customer.phone} onChange={(v: any) => setCustomer({ ...customer, phone: v })} placeholder="Enter Phone" />
+                                <InputGroup label="Customer Name" icon={User} value={customer.name} onChange={(v: string) => setCustomer({ ...customer, name: v })} placeholder="Enter Name" />
+                                <InputGroup label="Phone Number" icon={Phone} value={customer.phone} onChange={(v: string) => setCustomer({ ...customer, phone: v })} placeholder="Enter Phone" />
                             </div>
                             <div className="w-full lg:w-48 bg-amber-50 rounded-2xl p-3 border border-amber-100/50">
                                 <label className="text-[8px] font-black text-amber-600 uppercase tracking-widest block mb-0.5">Current Gold Rate</label>
@@ -105,7 +133,6 @@ export default function BillingPage() {
                         {cart.map((item, i) => (
                             <div key={item.id || i} className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
                                 <div className="p-6 space-y-6">
-                                    {/* Product Header */}
                                     <div className="flex justify-between items-start">
                                         <div>
                                             <h3 className="text-xl font-black text-slate-800 leading-none mb-1 uppercase">{item.categoryName}</h3>
@@ -114,7 +141,6 @@ export default function BillingPage() {
                                         <button onClick={() => setCart(cart.filter((_, idx) => idx !== i))} className="p-2 text-slate-200 hover:text-red-500 transition-all"><Trash2 size={20} /></button>
                                     </div>
 
-                                    {/* READ-ONLY Metal Row */}
                                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
                                         <ReadOnlyStat label="Net Weight" value={item.netWeight} unit="g" />
                                         <ReadOnlyStat label="Wastage %" value={item.wastagePercent} unit="%" />
@@ -122,21 +148,20 @@ export default function BillingPage() {
                                         <ReadOnlyStat label="Purity" value={item.carat} />
                                     </div>
 
-                                    {/* EDITABLE Tech Sections */}
                                     <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
                                         {item.diamondDetails && (
                                             <DetailCard icon={Sparkles} title="Diamond Details" color="cyan">
                                                 <div className="grid grid-cols-2 gap-2">
                                                     <div className="col-span-full mb-1">
                                                         <label className="text-[7px] font-black text-slate-400 uppercase">Name</label>
-                                                        <input className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-[11px] font-bold" value={item.diamondDetails.name} onChange={(e) => updateItemDetail(i, 'diamondDetails', 'name', e.target.value)} />
+                                                        <input className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-[11px] font-bold outline-none" value={item.diamondDetails.name} onChange={(e) => updateItemDetail(i, 'diamondDetails', 'name', e.target.value)} />
                                                     </div>
-                                                    <EditableStat label="Weight (ct)" value={item.diamondDetails.weight} mini onChange={(v) => updateItemDetail(i, 'diamondDetails', 'weight', v)} />
-                                                    <EditableStat label="Color" value={item.diamondDetails.color} isText mini onChange={(v) => updateItemDetail(i, 'diamondDetails', 'color', v)} />
-                                                    <EditableStat label="Clarity" value={item.diamondDetails.clarity} isText mini onChange={(v) => updateItemDetail(i, 'diamondDetails', 'clarity', v)} />
-                                                    <EditableStat label="Cut" value={item.diamondDetails.cut} isText mini onChange={(v) => updateItemDetail(i, 'diamondDetails', 'cut', v)} />
-                                                    <EditableStat label="Rate" value={item.diamondDetails.rate} mini onChange={(v) => updateItemDetail(i, 'diamondDetails', 'rate', v)} />
-                                                    <EditableStat label="Price (Rs)" value={item.diamondDetails.price} mini onChange={(v) => updateItemDetail(i, 'diamondDetails', 'price', v)} />
+                                                    <EditableStat label="Weight (ct)" value={item.diamondDetails.weight} mini onChange={(v: number) => updateItemDetail(i, 'diamondDetails', 'weight', v)} />
+                                                    <EditableStat label="Color" value={item.diamondDetails.color} isText mini onChange={(v: string) => updateItemDetail(i, 'diamondDetails', 'color', v)} />
+                                                    <EditableStat label="Clarity" value={item.diamondDetails.clarity} isText mini onChange={(v: string) => updateItemDetail(i, 'diamondDetails', 'clarity', v)} />
+                                                    <EditableStat label="Cut" value={item.diamondDetails.cut} isText mini onChange={(v: string) => updateItemDetail(i, 'diamondDetails', 'cut', v)} />
+                                                    <EditableStat label="Rate" value={item.diamondDetails.rate} mini onChange={(v: number) => updateItemDetail(i, 'diamondDetails', 'rate', v)} />
+                                                    <EditableStat label="Price (Rs)" value={item.diamondDetails.price} mini onChange={(v: number) => updateItemDetail(i, 'diamondDetails', 'price', v)} />
                                                 </div>
                                             </DetailCard>
                                         )}
@@ -146,10 +171,10 @@ export default function BillingPage() {
                                                 <div className="grid grid-cols-2 gap-2">
                                                     <div className="col-span-full mb-1">
                                                         <label className="text-[7px] font-black text-slate-400 uppercase">Name</label>
-                                                        <input className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-[11px] font-bold" value={item.stoneDetails.name} onChange={(e) => updateItemDetail(i, 'stoneDetails', 'name', e.target.value)} />
+                                                        <input className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-[11px] font-bold outline-none" value={item.stoneDetails.name} onChange={(e) => updateItemDetail(i, 'stoneDetails', 'name', e.target.value)} />
                                                     </div>
-                                                    <EditableStat label="Weight (ct)" value={item.stoneDetails.weight} mini onChange={(v) => updateItemDetail(i, 'stoneDetails', 'weight', v)} />
-                                                    <EditableStat label="Price (Rs)" value={item.stoneDetails.price} mini onChange={(v) => updateItemDetail(i, 'stoneDetails', 'price', v)} />
+                                                    <EditableStat label="Weight (ct)" value={item.stoneDetails.weight} mini onChange={(v: number) => updateItemDetail(i, 'stoneDetails', 'weight', v)} />
+                                                    <EditableStat label="Price (Rs)" value={item.stoneDetails.price} mini onChange={(v: number) => updateItemDetail(i, 'stoneDetails', 'price', v)} />
                                                 </div>
                                             </DetailCard>
                                         )}
@@ -157,8 +182,8 @@ export default function BillingPage() {
                                         {item.beadDetails && (
                                             <DetailCard icon={CircleDot} title="Bead Details" color="purple">
                                                 <div className="grid grid-cols-2 gap-2 mt-1">
-                                                    <EditableStat label="Weight (g)" value={item.beadDetails.weight} unit="g" mini onChange={(v) => updateItemDetail(i, 'beadDetails', 'weight', v)} />
-                                                    <EditableStat label="Price (Rs)" value={item.beadDetails.price} mini onChange={(v) => updateItemDetail(i, 'beadDetails', 'price', v)} />
+                                                    <EditableStat label="Weight (g)" value={item.beadDetails.weight} unit="g" mini onChange={(v: number) => updateItemDetail(i, 'beadDetails', 'weight', v)} />
+                                                    <EditableStat label="Price (Rs)" value={item.beadDetails.price} mini onChange={(v: number) => updateItemDetail(i, 'beadDetails', 'price', v)} />
                                                 </div>
                                             </DetailCard>
                                         )}
@@ -168,7 +193,6 @@ export default function BillingPage() {
                         ))}
                     </div>
 
-                    {/* Footer Summary */}
                     <div className="bg-slate-950 rounded-[2rem] p-6 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
                         <div className="flex gap-8">
                             <div>
@@ -196,8 +220,8 @@ export default function BillingPage() {
     );
 }
 
-// READ-ONLY HELPER
-function ReadOnlyStat({ label, value, unit = "" }: any) {
+// 2. Added explicit types to helper props
+function ReadOnlyStat({ label, value, unit = "" }: { label: string, value: string | number, unit?: string }) {
     return (
         <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-center">
             <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
@@ -208,8 +232,7 @@ function ReadOnlyStat({ label, value, unit = "" }: any) {
     );
 }
 
-// EDITABLE HELPER
-function EditableStat({ label, value, unit = "", onChange, mini = false, isText = false }: any) {
+function EditableStat({ label, value, unit = "", onChange, mini = false, isText = false }: { label: string, value: any, unit?: string, onChange: (v: any) => void, mini?: boolean, isText?: boolean }) {
     return (
         <div className={`${mini ? 'p-2' : 'p-2.5'} bg-white border border-slate-200 rounded-xl shadow-sm`}>
             <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
@@ -226,8 +249,8 @@ function EditableStat({ label, value, unit = "", onChange, mini = false, isText 
     );
 }
 
-function DetailCard({ children, icon: Icon, title, color }: any) {
-    const colors: any = {
+function DetailCard({ children, icon: Icon, title, color }: { children: React.ReactNode, icon: any, title: string, color: 'blue' | 'cyan' | 'purple' }) {
+    const colors = {
         blue: 'bg-blue-50/40 border-blue-100 text-blue-600',
         cyan: 'bg-cyan-50/40 border-cyan-100 text-cyan-600',
         purple: 'bg-purple-50/40 border-purple-100 text-purple-600'
@@ -243,7 +266,7 @@ function DetailCard({ children, icon: Icon, title, color }: any) {
     );
 }
 
-function InputGroup({ label, icon: Icon, value, onChange, placeholder }: any) {
+function InputGroup({ label, icon: Icon, value, onChange, placeholder }: { label: string, icon: any, value: string, onChange: (v: string) => void, placeholder: string }) {
     return (
         <div className="space-y-1 w-full">
             <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-1">{label}</label>

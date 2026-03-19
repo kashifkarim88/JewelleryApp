@@ -18,7 +18,7 @@ export default function HomePage() {
                 return <IndexPage />;
             case 'Stock':
                 return <StockPage />;
-            case 'Invoice':
+            case 'Billing':
                 return <InvoicePage />;
             default:
                 return <IndexPage />;
