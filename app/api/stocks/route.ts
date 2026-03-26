@@ -81,6 +81,7 @@ export async function POST(req: Request) {
     }
 }
 
+// app/api/stocks/route.ts
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const itemCode = searchParams.get("itemCode");
@@ -89,9 +90,12 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Item code is required" }, { status: 400 });
     }
 
+    // FIX: Normalize the input to match your DB (Uppercase + Trim spaces)
+    const normalizedCode = itemCode.trim().toUpperCase();
+
     try {
         const item = await prisma.stockItem.findUnique({
-            where: { itemCode: itemCode },
+            where: { itemCode: normalizedCode },
             include: {
                 stoneDetails: true,
                 beadDetails: true,
@@ -100,6 +104,7 @@ export async function GET(request: Request) {
         });
 
         if (!item) {
+            // If the item isn't found, we return a 404
             return NextResponse.json({ error: "Item not found" }, { status: 404 });
         }
 

@@ -14,7 +14,7 @@ export default function HomePage() {
     // 1. You must define the function here
     const renderContent = () => {
         switch (activeTab) {
-            case 'Index':
+            case 'Home':
                 return <IndexPage />;
             case 'Stock':
                 return <StockPage />;
