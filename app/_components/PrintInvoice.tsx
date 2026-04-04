@@ -24,91 +24,193 @@ export const PrintInvoice = ({ customer, goldRate, cart, discount }: PrintInvoic
             <style dangerouslySetInnerHTML={{
                 __html: `
                 @media print {
-                    @page { size: A4; margin: 10mm; }
-                    body { visibility: hidden; background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    @page { size: A4; margin: 8mm; }
+
+                    body {
+                        visibility: hidden;
+                        background: white;
+                        -webkit-print-color-adjust: exact;
+                    }
+
                     .print-wrapper {
                         visibility: visible;
                         position: absolute;
-                        left: 0; top: 0;
+                        top: 0;
+                        left: 0;
                         width: 190mm;
-                        color: black !important;
                         font-family: Arial, sans-serif;
-                    }
-                    
-                    /* Outer Border Only Table */
-                    .main-table { 
-                        width: 100%; 
-                        border-collapse: collapse; 
-                        border: 1.5px solid black !important; 
-                    }
-                    
-                    /* Remove all internal cell borders */
-                    .main-table th, .main-table td { 
-                        border: none !important; 
-                        padding: 6px 8px; 
-                        font-size: 11px; 
+                        font-size: 10px;
+                        color: black;
                     }
 
-                    .main-table th { 
-                        background-color: #B6B6B6 !important; 
-                        color: white !important; 
-                        text-transform: uppercase;
+                    .title {
+                        font-size: 22px;
+                        font-weight: bold;
+                    }
+
+                    .barcode-line {
+                        font-size: 18px;
+                        letter-spacing: 2px;
+                    }
+
+                    .barcode-number {
+                        font-size: 9px;
+                        letter-spacing: 4px;
                         text-align: center;
+                        font-weight: bold;
                     }
 
-                    /* Sub-Detail Styling (Internal rows for gold/stones) */
-                    .detail-table { width: 100%; border-collapse: collapse; }
-                    .detail-table td { border: none !important; padding: 4px 4px; }
-                    .border-t-black { border-top: 1px solid black !important; }
+                    .box {
+                        border: 1px solid black;
+                        width: 250px;
+                        margin-top: 6px;
+                    }
+
+                    .box-head {
+                        background: #bfbfbf;
+                        border-bottom: 1px solid black;
+                        padding: 2px 6px;
+                        font-size: 10px;
+                        font-weight: bold;
+                    }
+
+                    .box-body {
+                        padding: 6px;
+                    }
+
+                    .memo {
+                        margin-top: 8px;
+                        border-bottom: 1px solid black;
+                        padding-bottom: 2px;
+                    }
+
+                    .main-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        border: 1px solid black;
+                        margin-top: 6px;
+                    }
+
+                    .main-table th {
+                        background: #a6a6a6;
+                        padding: 4px;
+                        text-align: center;
+                        font-weight: bold;
+                    }
+
+                    .main-table td {
+                        padding: 4px;
+                        vertical-align: top;
+                    }
                     
-                    .box-container { border: 1.5px solid black; width: 280px; margin-bottom: 15px; }
-                    .box-header { background-color: #cbd5e1 !important; border-bottom: 1.5px solid black; padding: 2px 8px; font-size: 11px; font-weight: bold; }
+                    .detail-highlight {
+                        background-color: #f2f2f2;
+                    }
+
+                    .text-right { text-align: right; }
+                    .text-center { text-align: center; }
+
+                    .detail-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                    }
+
+                    .detail-table td {
+                        padding: 3px;
+                    }
+
+                    .top-line {
+                        border-top: 1px solid black;
+                    }
+
+                    .img-box {
+                        width: 120px;
+                        height: 80px;
+                        border: 1px solid black;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+
+                    .divider {
+                        border-top: 2px solid black;
+                        margin: 6px 0;
+                    }
+
+                    .summary {
+                        width: 300px;
+                        margin-left: auto;
+                        margin-top: 10px;
+                    }
+
+                    .summary-row {
+                        display: flex;
+                        justify-content: space-between;
+                        border-bottom: 1px solid black;
+                        padding: 3px 0;
+                    }
+
+                    .footer {
+                        margin-top: 30px;
+                        font-size: 9px;
+                        font-style: italic;
+                    }
                 }
             `}} />
 
             <div className="print-wrapper">
+
                 {/* Header */}
-                <div className="flex justify-between items-start mb-4">
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-800">Sale Invoice</h1>
-                        <div className="mt-1">
-                            <div className="text-2xl tracking-tighter">|| ||| || ||| || ||</div>
-                            <p className="text-[10px] tracking-[0.3em] font-bold">* 0 2 0 0 0 6 3 2 8 *</p>
-                        </div>
+                        <div className="title">Sale Invoice</div>
+                        <div className="barcode-line">||||||||||||||||||||</div>
+                        <div className="barcode-number">* 0 2 0 0 0 6 3 2 8 *</div>
                     </div>
-                    <div className="text-right text-sm font-bold">
-                        Date: {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+
+                    <div style={{ fontSize: "10px" }}>
+                        <b>Date:</b>{" "}
+                        {new Date().toLocaleDateString('en-GB', {
+                            weekday: 'long',
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                        })}
                     </div>
                 </div>
 
                 {/* Bill To */}
-                <div className="box-container">
-                    <div className="box-header uppercase">Bill To</div>
-                    <div className="p-2 font-bold text-sm">
-                        <p>{customer.name || "Mr. Wasim Abbas"}</p>
-                        <p className="font-normal text-xs">Contact #: {customer.phone || "0331-4581823"}</p>
-                        <p className="font-normal text-xs mt-1 text-slate-600">Peshawar, Pakistan</p>
+                <div className="box">
+                    <div className="box-head">Bill To</div>
+                    <div className="box-body">
+                        <b>{customer.name || "Mr. Wasim Abbas"}</b><br />
+                        Contact #: {customer.phone || "0331-4581823"}<br />
+                        <span style={{ color: "#555" }}>Peshawar, Pakistan</span>
                     </div>
                 </div>
 
                 {/* Memo */}
-                <div className="mb-4 text-sm font-bold border-b border-black pb-1">
-                    Memo <span className="font-normal italic ml-4">{cart[0]?.carat || "21K"} - {cart.map(i => i.categoryName).join(', ')}</span>
+                <div className="memo">
+                    <b>Memo</b>
+                    <span style={{ marginLeft: 10 }}>
+                        {cart[0]?.carat || "21K"} - {cart.map(i => i.categoryName).join(', ')}
+                    </span>
                 </div>
 
-                {/* Main Table with Outer Border Only */}
+                {/* Table */}
                 <table className="main-table">
                     <thead>
-                        <tr className="font-bold text-[10px]">
-                            <th className="w-[5%]">S No</th>
-                            <th className="w-[20%]">Item Code</th>
-                            <th className="w-[30%] text-left">Description</th>
-                            <th className="w-[10%]">Purity</th>
-                            <th className="w-[12%] text-right">Weight (gm)</th>
-                            <th className="w-[10%] text-right">Westage (%)</th>
-                            <th className="w-[13%] text-right">Westage (gm)</th>
+                        <tr>
+                            <th>S No</th>
+                            <th>Item Code</th>
+                            <th style={{ textAlign: "left" }}>Description</th>
+                            <th>Purity</th>
+                            <th>Weight (gm)</th>
+                            <th>Westage (%)</th>
+                            <th>Westage (gm)</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         {cart.map((item, idx) => {
                             const wastageGm = item.netWeight * (item.wastagePercent / 100);
@@ -117,77 +219,106 @@ export const PrintInvoice = ({ customer, goldRate, cart, discount }: PrintInvoic
 
                             return (
                                 <React.Fragment key={idx}>
+
+                                    {/* Main Row */}
                                     <tr>
-                                        <td className="text-center">{String(idx + 1).padStart(2, '0')}</td>
-                                        <td className="text-center py-2">
-                                            <div className="text-lg leading-none mb-1 text-slate-400">||||||||||||||||||||</div>
-                                            <span className="text-[9px] uppercase font-bold">{item.itemCode || "SS-1"}</span>
+                                        <td className="text-center">{idx + 1}</td>
+                                        <td className="text-center">
+                                            <div className="barcode-line">||||||||||||</div>
+                                            <div style={{ fontSize: 8 }}>{item.itemCode || "SS-1"}</div>
                                         </td>
-                                        <td className="text-left font-bold uppercase">{item.categoryName}</td>
+                                        <td><b>{item.categoryName}</b></td>
                                         <td className="text-center">{item.carat}</td>
-                                        <td className="text-right">{Number(item.netWeight).toFixed(3)}</td>
+                                        <td className="text-right">{item.netWeight.toFixed(3)}</td>
                                         <td className="text-right">{item.wastagePercent}</td>
                                         <td className="text-right">{wastageGm.toFixed(3)}</td>
                                     </tr>
+
+                                    {/* Detail Row */}
                                     <tr>
-                                        <td colSpan={2} className="p-2 align-middle">
-                                            <div className="w-full aspect-video bg-slate-50 border border-dashed border-slate-300 flex items-center justify-center">
-                                                {item.imageUrl ? <img src={item.imageUrl} className="max-h-full" alt="Product" /> : <span className="text-[7px] text-slate-400 font-bold uppercase text-center px-2">Image Area</span>}
+                                        <td colSpan={2}>
+                                            <div className="img-box">
+                                                {item.imageUrl
+                                                    ? <img src={item.imageUrl} style={{ maxHeight: "100%" }} />
+                                                    : "Image"}
                                             </div>
                                         </td>
-                                        <td colSpan={5} className="p-0">
-                                            <table className="detail-table font-bold">
-                                                <tr>
-                                                    <td className="w-[30%]">Gold (gm)</td>
-                                                    <td className="text-right w-[15%]">{totalGoldGm.toFixed(3)}</td>
-                                                    <td className="text-right w-[15%]">{ratePerGm.toFixed(1)}</td>
-                                                    <td className="text-left italic font-normal">per gm with making</td>
-                                                    <td className="text-right">{(totalGoldGm * ratePerGm).toLocaleString(undefined, { minimumFractionDigits: 3 })}</td>
+
+                                        <td colSpan={5}>
+                                            <table className="detail-table">
+                                                <tr className="detail-highlight">
+                                                    <td>Gold (gm)</td>
+                                                    <td className="text-right">{totalGoldGm.toFixed(3)}</td>
+                                                    <td className="text-right">{ratePerGm.toFixed(1)}</td>
+                                                    <td>per gm with making</td>
+                                                    <td className="text-right">
+                                                        {(totalGoldGm * ratePerGm).toFixed(2)}
+                                                    </td>
                                                 </tr>
-                                                <tr>
+
+                                                <tr className='detail-highlight'>
                                                     <td>Stones weight & price</td>
-                                                    <td className="text-right">{item.stoneDetails?.weight || 0}ct.</td>
-                                                    <td className="text-right">Rs</td>
+                                                    <td className="text-right">{item.stoneDetails?.weight || 0}</td>
+                                                    <td>Rs</td>
                                                     <td></td>
-                                                    <td className="text-right">{Number(item.stoneDetails?.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="text-right">
+                                                        {item.stoneDetails?.price || 0}
+                                                    </td>
                                                 </tr>
-                                                <tr className="border-t-black bg-slate-50">
-                                                    <td colSpan={4} className="text-right uppercase py-2">Item Sub Total (Rs)</td>
-                                                    <td className="text-right font-black">{(calculateItemPrice(item, goldRate)).toLocaleString(undefined, { minimumFractionDigits: 3 })}</td>
+
+                                                <tr className="top-line">
+                                                    <td colSpan={4} style={{ textAlign: "right" }}>
+                                                        <b>Item Sub Total (Rs)</b>
+                                                    </td>
+                                                    <td className="text-right">
+                                                        <b>{calculateItemPrice(item, goldRate).toFixed(2)}</b>
+                                                    </td>
                                                 </tr>
                                             </table>
                                         </td>
                                     </tr>
+
+                                    {/* ✅ Divider Between Products */}
+                                    {idx !== cart.length - 1 && (
+                                        <tr>
+                                            <td colSpan={7} style={{ padding: 0 }}>
+                                                <div className="divider" />
+                                            </td>
+                                        </tr>
+                                    )}
+
                                 </React.Fragment>
                             );
                         })}
                     </tbody>
                 </table>
 
-                {/* Summary Totals */}
-                <div className="flex justify-end mt-6">
-                    <div className="w-[320px]">
-                        {[
-                            { label: "Total Amount (Rs)", val: totalAmount },
-                            { label: "Received Price of Gold (Rs)", val: 6590000 },
-                            { label: "Total Cash Received (Rs)", val: 720000 },
-                            { label: "Net Balance (Rs)", val: 0 }
-                        ].map((row, i) => (
-                            <div key={i} className="flex justify-between items-center py-1.5 border-b border-black">
-                                <span className="text-[11px] font-bold uppercase">{row.label}</span>
-                                <span className={`text-[13px] font-black ${row.label === "Net Balance (Rs)" ? "border-b-4 border-double border-black" : ""}`}>
-                                    {row.val.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                </span>
-                            </div>
-                        ))}
+                {/* Summary */}
+                <div className="summary">
+                    <div className="summary-row">
+                        <span>Total Amount (Rs)</span>
+                        <b>{totalAmount.toFixed(2)}</b>
+                    </div>
+                    <div className="summary-row">
+                        <span>Received Price of Gold (Rs)</span>
+                        <b>6590000</b>
+                    </div>
+                    <div className="summary-row">
+                        <span>Total Cash Received (Rs)</span>
+                        <b>720000</b>
+                    </div>
+                    <div className="summary-row">
+                        <span>Net Balance (Rs)</span>
+                        <b>0.00</b>
                     </div>
                 </div>
 
-                {/* Policy Footer */}
-                <div className="mt-12 text-[9px] italic space-y-1 opacity-80">
-                    <p><strong>Item(s) Exchange Policy:</strong> Item(s) will be exchanged on net weight of gold.</p>
-                    <p><strong>Item(s) Return Policy:</strong> 10, 15 & 25% will be deducted on net weight of 22K, 21K & 18K gold respectively.</p>
+                {/* Footer */}
+                <div className="footer">
+                    <p><b>Item(s) Exchange Policy:</b> Item(s) will be exchanged on net weight of gold.</p>
+                    <p><b>Item(s) Return Policy:</b> 10, 15 & 25% will be deducted on net weight of 22K, 21K & 18K gold respectively.</p>
                 </div>
+
             </div>
         </div>
     );
