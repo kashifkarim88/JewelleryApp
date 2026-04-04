@@ -22,21 +22,23 @@ export const ReadOnlyStat = ({
     </div>
 );
 
-// 2. FULL INPUT: Added placeholder and optional className
+// 2. FULL INPUT: Added disabled prop
 export const FullInput = ({
     label,
     value,
     onChange,
     isNumber = false,
     placeholder = "",
-    className = ""
+    className = "",
+    disabled = false // Added
 }: {
     label: string,
     value: any,
     onChange: (v: any) => void,
     isNumber?: boolean,
     placeholder?: string,
-    className?: string
+    className?: string,
+    disabled?: boolean // Added
 }) => (
     <div className={`space-y-1 ${className}`}>
         <label className="text-[9px] font-bold text-slate-400 uppercase ml-1 tracking-wide">
@@ -45,7 +47,12 @@ export const FullInput = ({
         <input
             type={isNumber ? "number" : "text"}
             placeholder={placeholder}
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-400 transition-all placeholder:text-slate-300 placeholder:font-normal"
+            disabled={disabled} // Added
+            className={`w-full border rounded-lg px-3 py-2 text-xs font-bold outline-none transition-all 
+                ${disabled
+                    ? 'bg-slate-100 border-slate-100 text-slate-500 cursor-not-allowed'
+                    : 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white focus:border-blue-400 placeholder:text-slate-300 placeholder:font-normal'
+                }`}
             value={value || ''}
             onChange={(e) => {
                 const val = e.target.value;

@@ -6,9 +6,19 @@ export interface DetailSection {
 }
 
 export interface CartItem {
-    id: string; itemCode: string; categoryName: string; carat: string;
-    metal: string; netWeight: number; wastagePercent: number;
+    id: string;
+    itemCode: string;
+    productCode?: string;
+    categoryName: string;
+    carat: string;
+    metal: string;
+    netWeight: number;
+    wastagePercent: number;
+    wastageGram?: number;
     making: number;
+    description?: string;
+    workerName?: string;
+    imageUrl?: string | null;
     diamondDetails?: DetailSection | null;
     stoneDetails?: DetailSection | null;
     beadDetails?: DetailSection | null;
@@ -26,23 +36,20 @@ export const useBilling = () => {
         e.preventDefault();
         const query = itemInput.trim();
         if (!query) return;
-
         setIsFetching(true);
         try {
-            // We fetch the exact string typed to avoid Case-Sensitivity 404s
-            const res = await fetch(`/api/stocks?itemCode=${query}`);
+            const res = await fetch(`/api/stocks?itemCode=${query.toUpperCase()}`);
             const data = await res.json();
-
             if (res.ok && data) {
                 if (!cart.some(item => item.itemCode === data.itemCode)) {
                     setCart(prev => [data, ...prev]);
                 }
                 setItemInput("");
             } else {
-                alert(`Item "${query}" not found in database.`);
+                alert(`Item "${query}" not found.`);
             }
         } catch (err) {
-            alert("Network error. Please check your API.");
+            alert("Network error.");
         } finally {
             setIsFetching(false);
         }
@@ -52,26 +59,21 @@ export const useBilling = () => {
         setCart(prevCart => {
             const newCart = [...prevCart];
             const item = { ...newCart[index] };
-
-            // Ensure we are cloning the nested object correctly
             const sectionData = { ...(item[section] as any) };
             sectionData[field] = value;
-
             (item as any)[section] = sectionData;
             newCart[index] = item;
             return newCart;
         });
     };
 
-    const removeItem = (index: number) => {
-        setCart(prev => prev.filter((_, i) => i !== index));
-    };
+    const removeItem = (index: number) => setCart(prev => prev.filter((_, i) => i !== index));
 
     const calculateItemPrice = (item: CartItem) => {
         const ratePerGram = (goldRate || 0) / 11.664;
-        const metalValue = (Number(item.netWeight) || 0) * ratePerGram;
+        const totalWeight = Number(item.netWeight || 0) + Number(item.wastageGram || 0);
         return (
-            metalValue +
+            (totalWeight * ratePerGram) +
             (Number(item.making) || 0) +
             (Number(item.stoneDetails?.price) || 0) +
             (Number(item.beadDetails?.price) || 0) +
@@ -83,9 +85,8 @@ export const useBilling = () => {
     const finalTotal = subTotal - discount;
 
     return {
-        customer, setCustomer, goldRate, setGoldRate,
-        discount, setDiscount, itemInput, setItemInput,
-        isFetching, cart, fetchItem, updateItemDetail,
-        removeItem, subTotal, finalTotal
+        customer, setCustomer, goldRate, setGoldRate, discount, setDiscount,
+        itemInput, setItemInput, isFetching, cart, fetchItem,
+        updateItemDetail, removeItem, subTotal, finalTotal
     };
 };
