@@ -20,197 +20,60 @@ export const PrintInvoice = ({ customer, goldRate, cart, discount }: PrintInvoic
     const totalAmount = subTotal - discount;
 
     return (
-        <div className="hidden print:block">
+        <div className="hidden print:block print:bg-white print:text-black">
+            {/* Global Print Settings */}
             <style dangerouslySetInnerHTML={{
-                __html: `
-                @media print {
-                    @page { size: A4; margin: 8mm; }
+                __html: `@media print { @page { size: A4; margin: 8mm; } body { visibility: hidden; } }`
+            }} />
 
-                    body {
-                        visibility: hidden;
-                        background: white;
-                        -webkit-print-color-adjust: exact;
-                    }
-
-                    .print-wrapper {
-                        visibility: visible;
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        width: 190mm;
-                        font-family: Arial, sans-serif;
-                        font-size: 10px;
-                        color: black;
-                    }
-
-                    .title {
-                        font-size: 22px;
-                        font-weight: bold;
-                    }
-
-                    .barcode-line {
-                        font-size: 18px;
-                        letter-spacing: 2px;
-                    }
-
-                    .barcode-number {
-                        font-size: 9px;
-                        letter-spacing: 4px;
-                        text-align: center;
-                        font-weight: bold;
-                    }
-
-                    .box {
-                        border: 1px solid black;
-                        width: 250px;
-                        margin-top: 6px;
-                    }
-
-                    .box-head {
-                        background: #bfbfbf;
-                        border-bottom: 1px solid black;
-                        padding: 2px 6px;
-                        font-size: 10px;
-                        font-weight: bold;
-                    }
-
-                    .box-body {
-                        padding: 6px;
-                    }
-
-                    .memo {
-                        margin-top: 8px;
-                        border-bottom: 1px solid black;
-                        padding-bottom: 2px;
-                    }
-
-                    .main-table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        border: 1px solid black;
-                        margin-top: 6px;
-                    }
-
-                    .main-table th {
-                        background: #a6a6a6;
-                        padding: 4px;
-                        text-align: center;
-                        font-weight: bold;
-                    }
-
-                    .main-table td {
-                        padding: 4px;
-                        vertical-align: top;
-                    }
-                    
-                    .detail-highlight {
-                        background-color: #f2f2f2;
-                    }
-
-                    .text-right { text-align: right; }
-                    .text-center { text-align: center; }
-
-                    .detail-table {
-                        width: 100%;
-                        border-collapse: collapse;
-                    }
-
-                    .detail-table td {
-                        padding: 3px;
-                    }
-
-                    .top-line {
-                        border-top: 1px solid black;
-                    }
-
-                    .img-box {
-                        width: 120px;
-                        height: 80px;
-                        border: 1px solid black;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                    }
-
-                    .divider {
-                        border-top: 2px solid black;
-                        margin: 6px 0;
-                    }
-
-                    .summary {
-                        width: 300px;
-                        margin-left: auto;
-                        margin-top: 10px;
-                    }
-
-                    .summary-row {
-                        display: flex;
-                        justify-content: space-between;
-                        border-bottom: 1px solid black;
-                        padding: 3px 0;
-                    }
-
-                    .footer {
-                        margin-top: 30px;
-                        font-size: 9px;
-                        font-style: italic;
-                    }
-                }
-            `}} />
-
-            <div className="print-wrapper">
+            <div className="print:visible absolute top-0 left-0 w-[190mm] font-sans text-[10px]">
 
                 {/* Header */}
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <div className="flex justify-between items-start">
                     <div>
-                        <div className="title">Sale Invoice</div>
-                        <div className="barcode-line">||||||||||||||||||||</div>
-                        <div className="barcode-number">* 0 2 0 0 0 6 3 2 8 *</div>
+                        <div className="text-[22px] font-bold">Sale Invoice</div>
+                        <div className="text-[18px] tracking-[2px]">||||||||||||||||||||</div>
+                        <div className="text-[9px] tracking-[4px] text-center font-bold">* 0 2 0 0 0 6 3 2 8 *</div>
                     </div>
-
-                    <div style={{ fontSize: "10px" }}>
-                        <b>Date:</b>{" "}
+                    <div className="text-[10px]">
+                        <span className="font-bold">Date:</span>{" "}
                         {new Date().toLocaleDateString('en-GB', {
-                            weekday: 'long',
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric'
+                            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
                         })}
                     </div>
                 </div>
 
                 {/* Bill To */}
-                <div className="box">
-                    <div className="box-head">Bill To</div>
-                    <div className="box-body">
-                        <b>{customer.name || "Mr. Wasim Abbas"}</b><br />
+                <div className="border border-black w-62.5 mt-2">
+                    <div className="bg-[#bfbfbf] border-b border-black px-1.5 py-0.5 text-[10px] font-bold">Bill To</div>
+                    <div className="p-1.5 leading-tight">
+                        <b className="text-[11px]">{customer.name || "Mr. Wasim Abbas"}</b><br />
                         Contact #: {customer.phone || "0331-4581823"}<br />
-                        <span style={{ color: "#555" }}>Peshawar, Pakistan</span>
+                        <span className="text-gray-600">Peshawar, Pakistan</span>
                     </div>
                 </div>
 
                 {/* Memo */}
-                <div className="memo">
-                    <b>Memo</b>
-                    <span style={{ marginLeft: 10 }}>
+                <div className="mt-2 border-b border-black pb-0.5 font-sans">
+                    <span className="font-bold">Memo</span>
+                    <span className="ml-2.5">
                         {cart[0]?.carat || "21K"} - {cart.map(i => i.categoryName).join(', ')}
                     </span>
                 </div>
 
-                {/* Table */}
-                <table className="main-table">
+                {/* Main Table */}
+                <table className="w-full border-collapse border border-black mt-2 text-[10px]">
                     <thead>
-                        <tr>
-                            <th>S No</th>
-                            <th>Item Code</th>
-                            <th style={{ textAlign: "left" }}>Description</th>
-                            <th>Purity</th>
-                            <th>Weight (gm)</th>
-                            <th>Westage (%)</th>
-                            <th>Westage (gm)</th>
+                        <tr className="bg-[#a6a6a6]">
+                            <th className="border border-black p-1 text-center font-bold">S No</th>
+                            <th className="border border-black p-1 text-center font-bold">Item Code</th>
+                            <th className="border border-black p-1 text-left font-bold">Description</th>
+                            <th className="border border-black p-1 text-center font-bold">Purity</th>
+                            <th className="border border-black p-1 text-right font-bold">Weight (gm)</th>
+                            <th className="border border-black p-1 text-right font-bold">Wastage (%)</th>
+                            <th className="border border-black p-1 text-right font-bold">Wastage (gm)</th>
                         </tr>
                     </thead>
-
                     <tbody>
                         {cart.map((item, idx) => {
                             const wastageGm = item.netWeight * (item.wastagePercent / 100);
@@ -219,106 +82,95 @@ export const PrintInvoice = ({ customer, goldRate, cart, discount }: PrintInvoic
 
                             return (
                                 <React.Fragment key={idx}>
-
                                     {/* Main Row */}
                                     <tr>
-                                        <td className="text-center">{idx + 1}</td>
-                                        <td className="text-center">
-                                            <div className="barcode-line">||||||||||||</div>
-                                            <div style={{ fontSize: 8 }}>{item.itemCode || "SS-1"}</div>
+                                        <td className="p-1 text-center align-top border-x border-black">{idx + 1}</td>
+                                        <td className="p-1 text-center align-top border-x border-black">
+                                            <div className="text-[14px] leading-none tracking-tight">||||||||||||</div>
+                                            <div className="text-[8px]">{item.itemCode || "SS-1"}</div>
                                         </td>
-                                        <td><b>{item.categoryName}</b></td>
-                                        <td className="text-center">{item.carat}</td>
-                                        <td className="text-right">{item.netWeight.toFixed(3)}</td>
-                                        <td className="text-right">{item.wastagePercent}</td>
-                                        <td className="text-right">{wastageGm.toFixed(3)}</td>
+                                        <td className="p-1 align-top border-x border-black"><b>{item.categoryName}</b></td>
+                                        <td className="p-1 text-center align-top border-x border-black">{item.carat}</td>
+                                        <td className="p-1 text-right align-top border-x border-black">{item.netWeight.toFixed(3)}</td>
+                                        <td className="p-1 text-right align-top border-x border-black">{item.wastagePercent}</td>
+                                        <td className="p-1 text-right align-top border-x border-black">{wastageGm.toFixed(3)}</td>
                                     </tr>
 
                                     {/* Detail Row */}
                                     <tr>
-                                        <td colSpan={2}>
-                                            <div className="img-box">
+                                        <td colSpan={2} className="p-1 border-x border-black align-top">
+                                            <div className="w-30 h-20 border border-black flex items-center justify-center overflow-hidden">
                                                 {item.imageUrl
-                                                    ? <img src={item.imageUrl} style={{ maxHeight: "100%" }} />
-                                                    : "Image"}
+                                                    ? <img src={item.imageUrl} alt="item" className="max-h-full" />
+                                                    : <span className="text-gray-400">image</span>
+                                                }
                                             </div>
                                         </td>
-
-                                        <td colSpan={5}>
-                                            <table className="detail-table">
-                                                <tr className="detail-highlight">
-                                                    <td>Gold (gm)</td>
-                                                    <td className="text-right">{totalGoldGm.toFixed(3)}</td>
-                                                    <td className="text-right">{ratePerGm.toFixed(1)}</td>
-                                                    <td>per gm with making</td>
-                                                    <td className="text-right">
-                                                        {(totalGoldGm * ratePerGm).toFixed(2)}
-                                                    </td>
-                                                </tr>
-
-                                                <tr className='detail-highlight'>
-                                                    <td>Stones weight & price</td>
-                                                    <td className="text-right">{item.stoneDetails?.weight || 0}</td>
-                                                    <td>Rs</td>
-                                                    <td></td>
-                                                    <td className="text-right">
-                                                        {item.stoneDetails?.price || 0}
-                                                    </td>
-                                                </tr>
-
-                                                <tr className="top-line">
-                                                    <td colSpan={4} style={{ textAlign: "right" }}>
-                                                        <b>Item Sub Total (Rs)</b>
-                                                    </td>
-                                                    <td className="text-right">
-                                                        <b>{calculateItemPrice(item, goldRate).toFixed(2)}</b>
-                                                    </td>
-                                                </tr>
+                                        <td colSpan={5} className="p-1 border-x border-black align-top">
+                                            <table className="w-full border-collapse">
+                                                <tbody>
+                                                    <tr className="bg-[#f2f2f2]">
+                                                        <td className="p-0.75">Gold (gm)</td>
+                                                        <td className="p-0.75text-right">{totalGoldGm.toFixed(3)}</td>
+                                                        <td className="p-0.75 text-right">{ratePerGm.toFixed(1)}</td>
+                                                        <td className="p-0.75">per gm with making</td>
+                                                        <td className="p-0.75 text-right font-semibold">{(totalGoldGm * ratePerGm).toFixed(2)}</td>
+                                                    </tr>
+                                                    <tr className="bg-[#f2f2f2]">
+                                                        <td className="p-0.75">Stones weight & price</td>
+                                                        <td className="p-0.75 text-right">{item.stoneDetails?.weight || 0}</td>
+                                                        <td className="p-0.75">Rs</td>
+                                                        <td className="p-0.75"></td>
+                                                        <td className="p-0.75 text-right font-semibold">{item.stoneDetails?.price || 0}</td>
+                                                    </tr>
+                                                    <tr className="border-t border-black">
+                                                        <td colSpan={4} className="p-0.75 text-right font-bold">Item Sub Total (Rs)</td>
+                                                        <td className="p-0.75 text-right font-bold">{calculateItemPrice(item, goldRate).toFixed(2)}</td>
+                                                    </tr>
+                                                </tbody>
                                             </table>
                                         </td>
                                     </tr>
 
-                                    {/* ✅ Divider Between Products */}
+                                    {/* Divider */}
                                     {idx !== cart.length - 1 && (
                                         <tr>
-                                            <td colSpan={7} style={{ padding: 0 }}>
-                                                <div className="divider" />
+                                            <td colSpan={7} className="p-0 border-x border-black">
+                                                <div className="border-t-2 border-black my-1.5 mx-1" />
                                             </td>
                                         </tr>
                                     )}
 
+                                    {/* Bottom border for the last item to close the table visually */}
+                                    {idx === cart.length - 1 && (
+                                        <tr><td colSpan={7} className="border-t border-black"></td></tr>
+                                    )}
                                 </React.Fragment>
                             );
                         })}
                     </tbody>
                 </table>
 
-                {/* Summary */}
-                <div className="summary">
-                    <div className="summary-row">
-                        <span>Total Amount (Rs)</span>
-                        <b>{totalAmount.toFixed(2)}</b>
-                    </div>
-                    <div className="summary-row">
-                        <span>Received Price of Gold (Rs)</span>
-                        <b>6590000</b>
-                    </div>
-                    <div className="summary-row">
-                        <span>Total Cash Received (Rs)</span>
-                        <b>720000</b>
-                    </div>
-                    <div className="summary-row">
-                        <span>Net Balance (Rs)</span>
-                        <b>0.00</b>
-                    </div>
+                {/* Summary Section */}
+                <div className="w-75 ml-auto mt-2 text-[10px]">
+                    {[
+                        { label: "Total Amount (Rs)", value: totalAmount.toFixed(2), bold: true },
+                        { label: "Received Price of Gold (Rs)", value: "6,590,000" },
+                        { label: "Total Cash Received (Rs)", value: "720,000" },
+                        { label: "Net Balance (Rs)", value: "0.00", bold: true }
+                    ].map((row, i) => (
+                        <div key={i} className="flex justify-between border-b border-black py-0.5">
+                            <span>{row.label}</span>
+                            <span className={row.bold ? "font-bold" : ""}>{row.value}</span>
+                        </div>
+                    ))}
                 </div>
 
-                {/* Footer */}
-                <div className="footer">
+                {/* Footer Policy */}
+                <div className="mt-8 text-[9px] italic leading-tight">
                     <p><b>Item(s) Exchange Policy:</b> Item(s) will be exchanged on net weight of gold.</p>
                     <p><b>Item(s) Return Policy:</b> 10, 15 & 25% will be deducted on net weight of 22K, 21K & 18K gold respectively.</p>
                 </div>
-
             </div>
         </div>
     );
