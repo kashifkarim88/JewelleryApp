@@ -26,7 +26,7 @@ export interface CartItem {
 
 export const useBilling = () => {
     const [customer, setCustomer] = useState({ name: '', phone: '' });
-    const [goldRate, setGoldRate] = useState<number>(245000);
+    const [goldRate, setGoldRate] = useState<number>(0);
     const [discount, setDiscount] = useState<number>(0);
     const [itemInput, setItemInput] = useState("");
     const [isFetching, setIsFetching] = useState(false);
@@ -45,48 +45,44 @@ export const useBilling = () => {
                     setCart(prev => [data, ...prev]);
                 }
                 setItemInput("");
-            } else {
-                alert(`Item "${query}" not found.`);
-            }
-        } catch (err) {
-            alert("Network error.");
-        } finally {
-            setIsFetching(false);
-        }
+            } else { alert(`Item "${query}" not found.`); }
+        } catch (err) { alert("Network error."); } finally { setIsFetching(false); }
     };
 
     const updateItemDetail = (index: number, section: keyof CartItem, field: string, value: any) => {
         setCart(prevCart => {
             const newCart = [...prevCart];
             const item = { ...newCart[index] };
-            const sectionData = { ...(item[section] as any) };
-            sectionData[field] = value;
-            (item as any)[section] = sectionData;
+            if (field) {
+                const existingSection = item[section] && typeof item[section] === 'object' ? (item[section] as any) : {};
+                (item as any)[section] = { ...existingSection, [field]: value };
+            } else {
+                (item as any)[section] = value;
+            }
             newCart[index] = item;
             return newCart;
         });
     };
 
-    const removeItem = (index: number) => setCart(prev => prev.filter((_, i) => i !== index));
+    // Helper to sum up Diamond + Stone + Bead prices
+    const calculateAddons = (item: CartItem) => {
+        return (Number(item.diamondDetails?.price) || 0) +
+            (Number(item.stoneDetails?.price) || 0) +
+            (Number(item.beadDetails?.price) || 0);
+    };
 
     const calculateItemPrice = (item: CartItem) => {
         const ratePerGram = (goldRate || 0) / 11.664;
-        const totalWeight = Number(item.netWeight || 0) + Number(item.wastageGram || 0);
-        return (
-            (totalWeight * ratePerGram) +
-            (Number(item.making) || 0) +
-            (Number(item.stoneDetails?.price) || 0) +
-            (Number(item.beadDetails?.price) || 0) +
-            (Number(item.diamondDetails?.price) || 0)
-        );
+        const totalWeight = Number(item.netWeight || 0) + (Number(item.wastagePercent || 0) * Number(item.netWeight || 0) / 100);
+        return (totalWeight * ratePerGram) + (Number(item.making) || 0) + calculateAddons(item);
     };
 
     const subTotal = cart.reduce((a, b) => a + calculateItemPrice(b), 0);
-    const finalTotal = subTotal - discount;
 
     return {
         customer, setCustomer, goldRate, setGoldRate, discount, setDiscount,
         itemInput, setItemInput, isFetching, cart, fetchItem,
-        updateItemDetail, removeItem, subTotal, finalTotal
+        updateItemDetail, removeItem: (index: number) => setCart(prev => prev.filter((_, i) => i !== index)),
+        calculateItemPrice, calculateAddons, subTotal, finalTotal: subTotal - discount
     };
 };
