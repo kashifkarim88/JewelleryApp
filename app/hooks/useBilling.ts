@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export interface DetailSection {
     id?: string; name?: string; weight?: number; price?: number;
@@ -25,13 +25,37 @@ export interface CartItem {
 }
 
 export const useBilling = () => {
-    const [customer, setCustomer] = useState({ name: '', phone: '' });
-    const [goldRate, setGoldRate] = useState<number>(0);
-    const [discount, setDiscount] = useState<number>(0);
+    // --- PERSISTENCE HELPERS ---
+    const getSaved = (key: string, fallback: any) => {
+        if (typeof window === "undefined") return fallback;
+        const saved = sessionStorage.getItem(key);
+        try {
+            return saved ? JSON.parse(saved) : fallback;
+        } catch {
+            return fallback;
+        }
+    };
+
+    // --- INITIAL STATE (Loaded from Session) ---
+    const [customer, setCustomer] = useState(() => getSaved('bill_customer', { name: '', phone: '' }));
+    const [goldRate, setGoldRate] = useState<number>(() => getSaved('bill_goldRate', 0));
+    const [discount, setDiscount] = useState<number>(() => getSaved('bill_discount', 0));
+    const [exchangeValue, setExchangeValue] = useState<number>(() => getSaved('bill_exchangeValue', 0));
+    const [cart, setCart] = useState<CartItem[]>(() => getSaved('bill_cart', []));
+
     const [itemInput, setItemInput] = useState("");
     const [isFetching, setIsFetching] = useState(false);
-    const [cart, setCart] = useState<CartItem[]>([]);
 
+    // --- AUTO-SAVE EFFECT ---
+    useEffect(() => {
+        sessionStorage.setItem('bill_customer', JSON.stringify(customer));
+        sessionStorage.setItem('bill_goldRate', JSON.stringify(goldRate));
+        sessionStorage.setItem('bill_discount', JSON.stringify(discount));
+        sessionStorage.setItem('bill_exchangeValue', JSON.stringify(exchangeValue));
+        sessionStorage.setItem('bill_cart', JSON.stringify(cart));
+    }, [customer, goldRate, discount, exchangeValue, cart]);
+
+    // --- EXISTING LOGIC (Unchanged) ---
     const fetchItem = async (e: React.FormEvent) => {
         e.preventDefault();
         const query = itemInput.trim();
@@ -64,7 +88,6 @@ export const useBilling = () => {
         });
     };
 
-    // Helper to sum up Diamond + Stone + Bead prices
     const calculateAddons = (item: CartItem) => {
         return (Number(item.diamondDetails?.price) || 0) +
             (Number(item.stoneDetails?.price) || 0) +
@@ -79,10 +102,25 @@ export const useBilling = () => {
 
     const subTotal = cart.reduce((a, b) => a + calculateItemPrice(b), 0);
 
+    const clearSession = () => {
+        sessionStorage.clear(); // Wipes everything
+        // Reset states to defaults
+        setCustomer({ name: '', phone: '' });
+        setGoldRate(0);
+        setDiscount(0);
+        setExchangeValue(0);
+        setCart([]);
+    };
+
     return {
-        customer, setCustomer, goldRate, setGoldRate, discount, setDiscount,
+        customer, setCustomer, goldRate, setGoldRate,
+        discount, setDiscount,
+        exchangeValue, setExchangeValue,
         itemInput, setItemInput, isFetching, cart, fetchItem,
         updateItemDetail, removeItem: (index: number) => setCart(prev => prev.filter((_, i) => i !== index)),
-        calculateItemPrice, calculateAddons, subTotal, finalTotal: subTotal - discount
+        calculateItemPrice, calculateAddons,
+        subTotal,
+        finalTotal: subTotal - discount - exchangeValue,
+        clearSession
     };
 };
