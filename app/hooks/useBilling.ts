@@ -16,6 +16,7 @@ export interface CartItem {
     wastagePercent: number;
     wastageGram?: number;
     making: number;
+    discount?: number; // Added per-item discount field
     description?: string;
     workerName?: string;
     imageUrl?: string | null;
@@ -36,10 +37,10 @@ export const useBilling = () => {
         }
     };
 
-    // --- INITIAL STATE (Loaded from Session) ---
+    // --- INITIAL STATE ---
     const [customer, setCustomer] = useState(() => getSaved('bill_customer', { name: '', phone: '' }));
     const [goldRate, setGoldRate] = useState<number>(() => getSaved('bill_goldRate', 0));
-    const [discount, setDiscount] = useState<number>(() => getSaved('bill_discount', 0));
+    const [overallDiscount, setOverallDiscount] = useState<number>(() => getSaved('bill_discount', 0)); // Total bill discount
     const [exchangeValue, setExchangeValue] = useState<number>(() => getSaved('bill_exchangeValue', 0));
     const [cart, setCart] = useState<CartItem[]>(() => getSaved('bill_cart', []));
 
@@ -50,12 +51,11 @@ export const useBilling = () => {
     useEffect(() => {
         sessionStorage.setItem('bill_customer', JSON.stringify(customer));
         sessionStorage.setItem('bill_goldRate', JSON.stringify(goldRate));
-        sessionStorage.setItem('bill_discount', JSON.stringify(discount));
+        sessionStorage.setItem('bill_discount', JSON.stringify(overallDiscount));
         sessionStorage.setItem('bill_exchangeValue', JSON.stringify(exchangeValue));
         sessionStorage.setItem('bill_cart', JSON.stringify(cart));
-    }, [customer, goldRate, discount, exchangeValue, cart]);
+    }, [customer, goldRate, overallDiscount, exchangeValue, cart]);
 
-    // --- EXISTING LOGIC (Unchanged) ---
     const fetchItem = async (e: React.FormEvent) => {
         e.preventDefault();
         const query = itemInput.trim();
@@ -66,7 +66,8 @@ export const useBilling = () => {
             const data = await res.json();
             if (res.ok && data) {
                 if (!cart.some(item => item.itemCode === data.itemCode)) {
-                    setCart(prev => [data, ...prev]);
+                    // Initialize discount as 0 for new items
+                    setCart(prev => [{ ...data, discount: 0 }, ...prev]);
                 }
                 setItemInput("");
             } else { alert(`Item "${query}" not found.`); }
@@ -97,30 +98,38 @@ export const useBilling = () => {
     const calculateItemPrice = (item: CartItem) => {
         const ratePerGram = (goldRate || 0) / 11.664;
         const totalWeight = Number(item.netWeight || 0) + (Number(item.wastagePercent || 0) * Number(item.netWeight || 0) / 100);
-        return (totalWeight * ratePerGram) + (Number(item.making) || 0) + calculateAddons(item);
+
+        const basePrice = (totalWeight * ratePerGram) + (Number(item.making) || 0) + calculateAddons(item);
+        const itemDiscount = Number(item.discount || 0);
+
+        // Subtract item-specific discount from the item total
+        const finalItemPrice = basePrice - itemDiscount;
+
+        return finalItemPrice > 0 ? finalItemPrice : 0; // Prevent negative prices
     };
 
+    // Subtotal is the sum of all item prices (which already have item-discounts subtracted)
     const subTotal = cart.reduce((a, b) => a + calculateItemPrice(b), 0);
 
     const clearSession = () => {
-        sessionStorage.clear(); // Wipes everything
-        // Reset states to defaults
+        sessionStorage.clear();
         setCustomer({ name: '', phone: '' });
         setGoldRate(0);
-        setDiscount(0);
+        setOverallDiscount(0);
         setExchangeValue(0);
         setCart([]);
     };
 
     return {
         customer, setCustomer, goldRate, setGoldRate,
-        discount, setDiscount,
+        discount: overallDiscount, setDiscount: setOverallDiscount,
         exchangeValue, setExchangeValue,
         itemInput, setItemInput, isFetching, cart, fetchItem,
         updateItemDetail, removeItem: (index: number) => setCart(prev => prev.filter((_, i) => i !== index)),
         calculateItemPrice, calculateAddons,
         subTotal,
-        finalTotal: subTotal - discount - exchangeValue,
+        // finalTotal takes the subtotal and applies the global bill discount and exchange
+        finalTotal: subTotal - overallDiscount - exchangeValue,
         clearSession
     };
 };

@@ -109,8 +109,9 @@ export default function BillingPage() {
                                             key={item.id}
                                             item={item}
                                             index={i}
-                                            isEditing={editId === item.id}
-                                            onToggleEdit={() => setEditId(editId === item.id ? null : item.id)}
+                                            // This ensures only the item matching editId is "Open"
+                                            isOpen={editId === item.id}
+                                            onToggle={() => setEditId(editId === item.id ? null : item.id)}
                                             onUpdate={updateItemDetail}
                                             onRemove={removeItem}
                                             onPrint={() => handlePrint([item], true)}
