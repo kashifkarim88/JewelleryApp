@@ -1,47 +1,34 @@
 "use client"
 import React, { useState } from 'react';
-import { Loader2, Search, Printer } from 'lucide-react';
-import { useBilling, CartItem } from '../hooks/useBilling';
+import { Loader2, Search } from 'lucide-react';
+import { useBilling } from '../hooks/useBilling';
 import { FullInput } from './_billing/BillingComponents';
-import { PrintInvoice } from './PrintInvoice';
-
-// Internal Components
 import { SectionHeader } from './_billing/SectionHeader';
 import { CartItemCard } from './_billing/CartItemCard';
 import { BillingSummary } from './_billing/BillingSummary';
+import { PrintInvoice } from './PrintInvoice';
 
-export default function BillingPage() {
+function InvoicePage() {
     const {
         customer, setCustomer, goldRate, setGoldRate,
-        discount, setDiscount,
+        discount, itemDiscountsSum, extraDiscount, setExtraDiscount,
         exchangeValue, setExchangeValue,
+        advance, setAdvance, // <-- Added these two from useBilling
         itemInput, setItemInput, isFetching, cart, fetchItem,
         updateItemDetail, removeItem, calculateItemPrice, calculateAddons,
-        subTotal, finalTotal,
-        clearSession // <--- 1. Pull this from your updated useBilling hook
+        finalTotal, clearSession
     } = useBilling();
 
     const [editId, setEditId] = useState<string | null>(null);
-    const [printData, setPrintData] = useState<{
-        items: CartItem[];
-        isSingle: boolean;
-    } | null>(null);
+    const [printData, setPrintData] = useState<{ items: any[], isSingle: boolean } | null>(null);
 
-    // 2. Modified handlePrint to handle session clearing
-    const handlePrint = (items: CartItem[], isSingle: boolean) => {
+    const handlePrint = (items: any[], isSingle: boolean) => {
         setPrintData({ items, isSingle });
-
         setTimeout(() => {
             window.print();
-
-            // Logic: If it was a Full Invoice (not single item), ask to clear
             if (!isSingle && items.length > 0) {
-                // We use a slight delay so the confirm box doesn't block the print stream
                 setTimeout(() => {
-                    const confirmClear = window.confirm(
-                        "Invoice generated. Would you like to clear the current bill and start fresh?"
-                    );
-                    if (confirmClear) {
+                    if (window.confirm("Invoice generated. Clear current bill?")) {
                         clearSession();
                     }
                 }, 500);
@@ -61,30 +48,23 @@ export default function BillingPage() {
             <div className="print:hidden min-h-screen bg-[#F8FAFC] p-4 lg:p-6 text-slate-900 antialiased">
                 <div className="max-w-350 mx-auto">
                     <SectionHeader goldRate={goldRate} setGoldRate={setGoldRate} />
-
-                    <div className="flex flex-col lg:flex-row gap-6 items-start">
+                    <div className="flex flex-col lg:flex-row gap-6 items-start mt-6">
                         <div className="flex-1 w-full space-y-6">
-                            {/* Customer & Search Bar */}
                             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-5 items-end">
                                 <FullInput
                                     label="Customer Name"
                                     value={customer.name}
                                     onChange={(v) => setCustomer({ ...customer, name: v })}
-                                    placeholder="Name"
                                 />
                                 <FullInput
                                     label="Phone"
                                     value={customer.phone}
                                     onChange={(v) => setCustomer({ ...customer, phone: v })}
-                                    placeholder="Contact"
                                 />
                                 <form onSubmit={fetchItem} className="flex flex-col">
-                                    <label className="text-[9px] font-black uppercase text-slate-400 mb-1.5 block">
-                                        Stock Search
-                                    </label>
+                                    <label className="text-[9px] font-black uppercase text-slate-400 mb-1.5 block">Stock Search</label>
                                     <div className="relative">
                                         <input
-                                            type="text"
                                             className="w-full py-2 px-4 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none uppercase"
                                             placeholder="ITEM CODE"
                                             value={itemInput}
@@ -97,11 +77,10 @@ export default function BillingPage() {
                                 </form>
                             </div>
 
-                            {/* Dynamic Cart Items List */}
                             <div className="space-y-4">
                                 {cart.length === 0 ? (
                                     <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-3xl opacity-40">
-                                        <p className="text-[10px] font-black uppercase tracking-widest">No items in bill</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest">No items added</p>
                                     </div>
                                 ) : (
                                     cart.map((item, i) => (
@@ -109,7 +88,6 @@ export default function BillingPage() {
                                             key={item.id}
                                             item={item}
                                             index={i}
-                                            // This ensures only the item matching editId is "Open"
                                             isOpen={editId === item.id}
                                             onToggle={() => setEditId(editId === item.id ? null : item.id)}
                                             onUpdate={updateItemDetail}
@@ -123,11 +101,17 @@ export default function BillingPage() {
                             </div>
                         </div>
 
+                        {/* Updated BillingSummary with advance props */}
                         <BillingSummary
+                            cart={cart}
                             discount={discount}
-                            setDiscount={setDiscount}
+                            itemDiscountsSum={itemDiscountsSum}
+                            extraDiscount={extraDiscount}
+                            setExtraDiscount={setExtraDiscount}
                             exchangeValue={exchangeValue}
                             setExchangeValue={setExchangeValue}
+                            advance={advance}
+                            setAdvance={setAdvance}
                             finalTotal={finalTotal}
                             onPrintFull={() => handlePrint(cart, false)}
                         />
@@ -137,3 +121,5 @@ export default function BillingPage() {
         </>
     );
 }
+
+export default InvoicePage;
