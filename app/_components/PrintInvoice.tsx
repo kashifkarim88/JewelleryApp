@@ -8,12 +8,18 @@ interface PrintInvoiceProps {
     // New props for single-item printing
     isSingle?: boolean;
     activeItem?: any;
+    exchangeValue: number;
+    advance: Number;
+    finalTotal: number;
 }
 
 export const PrintInvoice = ({
     customer,
     goldRate,
     cart,
+    exchangeValue,
+    advance,
+    finalTotal,
     discount,
     isSingle = false,
     activeItem

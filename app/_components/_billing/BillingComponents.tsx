@@ -30,7 +30,8 @@ export const FullInput = ({
     isNumber = false,
     placeholder = "",
     className = "",
-    disabled = false // Added
+    disabled = false,
+    icon: Icon
 }: {
     label: string,
     value: any,
@@ -38,7 +39,8 @@ export const FullInput = ({
     isNumber?: boolean,
     placeholder?: string,
     className?: string,
-    disabled?: boolean // Added
+    disabled?: boolean,
+    icon?: LucideIcon
 }) => (
     <div className={`space-y-1 ${className}`}>
         <label className="text-[9px] font-bold text-slate-400 uppercase ml-1 tracking-wide">
