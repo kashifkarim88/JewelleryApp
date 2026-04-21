@@ -10,7 +10,7 @@ export interface CartItem {
     carat: string; metal: string; netWeight: number; wastagePercent: number;
     making: number;
     discount?: number;
-    advance?: number; // New field for itemized advance
+    advance?: number;
     diamondDetails?: DetailSection | null;
     stoneDetails?: DetailSection | null;
     beadDetails?: DetailSection | null;

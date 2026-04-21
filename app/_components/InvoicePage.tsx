@@ -13,7 +13,7 @@ function InvoicePage() {
         customer, setCustomer, goldRate, setGoldRate,
         discount, itemDiscountsSum, extraDiscount, setExtraDiscount,
         exchangeValue, setExchangeValue,
-        advance, // This is the state for the Global Input
+        advance,
         setAdvance,
         totalAdvance, // ADD THIS: This is the combined sum (Global + Items)
         itemInput, setItemInput, isFetching, cart, fetchItem,
@@ -58,7 +58,7 @@ function InvoicePage() {
             />
 
             <div className="print:hidden min-h-screen bg-[#F8FAFC] p-4 lg:p-8 text-slate-900 antialiased">
-                <div className="max-w-[1400px] mx-auto">
+                <div className="max-w-350 mx-auto">
 
                     {/* Header with Gold Rate Control */}
                     <SectionHeader goldRate={goldRate} setGoldRate={setGoldRate} />
@@ -145,7 +145,7 @@ function InvoicePage() {
                         </div>
 
                         {/* RIGHT COLUMN: Summary & Advanced Billing */}
-                        <div className="w-full lg:w-[400px] sticky top-8">
+                        <div className="w-full lg:w-100 sticky top-8">
                             <BillingSummary
                                 cart={cart}
                                 discount={discount}
@@ -159,14 +159,6 @@ function InvoicePage() {
                                 finalTotal={finalTotal}
                                 onPrintFull={() => handlePrint(cart, false)}
                             />
-
-                            {/* Optional: Small helpful hint for the user */}
-                            <div className="mt-6 p-4 bg-blue-50/50 rounded-2xl border border-blue-100">
-                                <p className="text-[9px] font-bold text-blue-600 uppercase leading-relaxed text-center italic">
-                                    Changes to individual items are saved instantly. <br />
-                                    Tax and final deductions are applied in the summary.
-                                </p>
-                            </div>
                         </div>
 
                     </div>

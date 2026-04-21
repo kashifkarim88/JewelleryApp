@@ -1,6 +1,6 @@
 "use client"
-import React, { useMemo } from 'react'; // Added useMemo for efficiency
-import { Tag, Printer, ReceiptText, Plus, Landmark, Wallet, ArrowDownCircle } from 'lucide-react';
+import { useMemo } from 'react';
+import { Tag, Printer, ReceiptText, Wallet } from 'lucide-react';
 import { FullInput } from './BillingComponents';
 
 export const BillingSummary = ({
@@ -30,7 +30,7 @@ export const BillingSummary = ({
 
     return (
         <div className="w-full lg:w-80 sticky top-6">
-            <div className="bg-white rounded-[24px] border border-slate-200 shadow-xl overflow-hidden">
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
                 <div className="bg-slate-900 px-5 py-4 flex items-center gap-2 text-white">
                     <ReceiptText size={16} className="text-indigo-400" />
                     <h2 className="text-[11px] font-black uppercase tracking-widest">Bill Summary</h2>
@@ -111,12 +111,12 @@ export const BillingSummary = ({
                             isNumber
                             onChange={(v: any) => setExtraDiscount(Number(v) || 0)}
                         />
-                        <FullInput
+                        {/* <FullInput
                             label="Exchange"
                             value={exchangeValue === 0 ? '' : exchangeValue}
                             isNumber
                             onChange={(v: any) => setExchangeValue(Number(v) || 0)}
-                        />
+                        /> */}
                     </div>
                     <FullInput
                         label="Global Advance Adjustment"
