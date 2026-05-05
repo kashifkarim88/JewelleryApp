@@ -12,59 +12,55 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        // 2. Transaction for atomic consistency
         const newItem = await prisma.$transaction(async (tx) => {
             return await tx.stockItem.create({
                 data: {
                     itemCode: body.itemCode,
                     metal: body.metal,
                     carat: body.carat,
-                    purity: body.purity ? parseFloat(body.purity) : null, // Added Purity handling
+                    purity: body.purity ? parseFloat(body.purity) : null,
                     categoryName: body.categoryName,
                     productCode: body.productCode,
                     description: body.description,
                     workerName: body.workerName,
-                    netWeight: parseFloat(body.netWeight),
+                    netWeight: parseFloat(body.netWeight || 0),
                     wastageGram: parseFloat(body.wastageGram || 0),
                     wastagePercent: parseFloat(body.wastagePercent || 0),
                     making: parseFloat(body.making || 0),
                     imageUrl: body.imageUrl,
 
-                    // Mapped to your schema: stoneDetails
-                    stoneDetails: body.stoneData?.name ? {
-                        create: {
-                            name: body.stoneData.name,
-                            weight: parseFloat(body.stoneData.weight || 0),
-                            price: parseFloat(body.stoneData.price || 0),
-                        }
+                    // 2. Updated Stone Mapping (Handles Arrays)
+                    stoneDetails: body.stoneData ? {
+                        create: body.stoneData.map((s: any) => ({
+                            name: s.name,
+                            weight: parseFloat(s.weight || 0),
+                            price: parseFloat(s.price || 0),
+                            squantity: parseInt(s.qty || body.squantity || 0)
+                        }))
                     } : undefined,
 
-                    // Mapped to your schema: beadDetails
-                    beadDetails: body.beadData?.weight ? {
+                    // 3. Bead Details (Remains single object logic)
+                    beadDetails: body.beadData ? {
                         create: {
                             weight: parseFloat(body.beadData.weight || 0),
                             price: parseFloat(body.beadData.price || 0),
                         }
                     } : undefined,
 
-                    // Mapped to your schema: diamondDetails
-                    diamondDetails: body.diamondData?.name ? {
-                        create: {
-                            name: body.diamondData.name,
-                            weight: parseFloat(body.diamondData.weight || 0),
-                            color: body.diamondData.color,
-                            cut: body.diamondData.cut,
-                            clarity: body.diamondData.clarity,
-                            rate: parseFloat(body.diamondData.rate || 0),
-                            price: parseFloat(body.diamondData.price || 0),
-                        }
+                    // 4. Updated Diamond Mapping (Handles Arrays)
+                    diamondDetails: body.diamondData ? {
+                        create: body.diamondData.map((d: any) => ({
+                            name: d.name,
+                            weight: parseFloat(d.weight || 0),
+                            color: d.color,
+                            cut: d.cut,
+                            clarity: d.clarity,
+                            rate: parseFloat(d.rate || 0),
+                            price: parseFloat(d.price || 0),
+                            dquantity: parseInt(d.qty || body.dquantity || 0)
+                        }))
                     } : undefined,
                 },
-                include: {
-                    stoneDetails: true,
-                    beadDetails: true,
-                    diamondDetails: true,
-                }
             });
         });
 
@@ -81,7 +77,6 @@ export async function POST(req: Request) {
     }
 }
 
-// app/api/stocks/route.ts
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const itemCode = searchParams.get("itemCode");
@@ -90,7 +85,6 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Item code is required" }, { status: 400 });
     }
 
-    // FIX: Normalize the input to match your DB (Uppercase + Trim spaces)
     const normalizedCode = itemCode.trim().toUpperCase();
 
     try {
@@ -104,10 +98,9 @@ export async function GET(request: Request) {
         });
 
         if (!item) {
-            // If the item isn't found, we return a 404
             return NextResponse.json({ error: "Item not found" }, { status: 404 });
         }
-
+        console.log("Fetched Item:", item);
         return NextResponse.json(item);
     } catch (error) {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 
 export interface DetailSection {
     id?: string; name?: string; weight?: number; price?: number;
-    color?: string; clarity?: string; cut?: string; rate?: number;
+    color?: string; clarity?: string; cut?: string; rate?: number; squantity?: number;
+    dquantity?: number;
 }
 
 export interface CartItem {
@@ -11,8 +12,8 @@ export interface CartItem {
     making: number;
     discount?: number;
     advance?: number;
-    diamondDetails?: DetailSection | null;
-    stoneDetails?: DetailSection | null;
+    diamondDetails?: DetailSection[] | null;
+    stoneDetails?: DetailSection[] | null;
     beadDetails?: DetailSection | null;
 }
 
@@ -51,11 +52,12 @@ export const useBilling = () => {
         cart.reduce((sum, item) => sum + (Number(item.advance) || 0), 0)
         , [cart]);
 
-    const calculateAddons = (item: CartItem) => (
-        (Number(item.diamondDetails?.price) || 0) +
-        (Number(item.stoneDetails?.price) || 0) +
-        (Number(item.beadDetails?.price) || 0)
-    );
+    const calculateAddons = (item: CartItem) => {
+        const stonesPrice = (item.stoneDetails || []).reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+        const diamondsPrice = (item.diamondDetails || []).reduce((sum, d) => sum + (Number(d.price) || 0), 0);
+        const beadsPrice = Number(item.beadDetails?.price) || 0;
+        return stonesPrice + diamondsPrice + beadsPrice;
+    };
 
     const calculateItemBasePrice = (item: CartItem) => {
         const ratePerGram = (goldRate || 0) / 11.664;
@@ -85,9 +87,17 @@ export const useBilling = () => {
         try {
             const res = await fetch(`/api/stocks?itemCode=${query}`);
             const data = await res.json();
+            console.log("Fetched item data:", data);
             if (res.ok) {
                 if (!cart.some(i => i.itemCode === data.itemCode)) {
-                    setCart(prev => [{ ...data, discount: 0, advance: 0 }, ...prev]);
+                    setCart(prev => [{
+                        ...data,
+                        discount: 0,
+                        advance: 0,
+                        // Ensure these are always arrays even if API returns null
+                        stoneDetails: data.stoneDetails || [],
+                        diamondDetails: data.diamondDetails || []
+                    }, ...prev]);
                 }
                 setItemInput("");
             }
@@ -106,6 +116,24 @@ export const useBilling = () => {
         } else {
             (newCart[index] as any)[section] = value;
         }
+        setCart(newCart);
+    };
+
+    const updateNestedDetail = (
+        itemIndex: number,
+        section: 'stoneDetails' | 'diamondDetails',
+        detailIndex: number,
+        field: string,
+        value: any
+    ) => {
+        const newCart = [...cart];
+        const item = { ...newCart[itemIndex] };
+        const details = [...(item[section] as DetailSection[])];
+
+        details[detailIndex] = { ...details[detailIndex], [field]: value };
+        item[section] = details;
+        newCart[itemIndex] = item;
+
         setCart(newCart);
     };
 
@@ -135,5 +163,6 @@ export const useBilling = () => {
         subTotal,
         finalTotal,
         clearSession,
+        updateNestedDetail
     };
 };

@@ -1,10 +1,17 @@
-"use client"
-import React, { useEffect } from 'react';
-import Barcode from 'react-barcode';
-import { Search, CircleDashed, Hammer, Gem, Camera, X, ChevronDown, ChevronUp, Lock, Plus, Loader2 } from 'lucide-react';
+"use client";
+import React from 'react';
+import { Gem, X, Hammer, CircleDashed, Trash2, Plus } from 'lucide-react';
 import CategoryForm from './CategoryForm';
 import WorkerForm from './WorkerForm';
 import { useStockLogic } from '../hooks/useStockForm';
+
+// Import sub-components
+import { MetalSelector } from './stockComponents/MetalSelector';
+import { ProductCoreForm } from './stockComponents/ProductCoreForm';
+import { WeightMetrics } from './stockComponents/WeightMetrics';
+import { ImageUploadSidebar } from './stockComponents/ImageUploadSidebar';
+import SectionWrapper from './stockComponents/SectionWrapper';
+import InputBlock from './stockComponents/InputBlock';
 
 export default function StockPage() {
     const {
@@ -14,344 +21,356 @@ export default function StockPage() {
         prodCode, setProdCode, imagePreview, setImagePreview, isSubmitting, vals, setVals,
         showStone, setShowStone, showBeads, setShowBeads, showDiamond, setShowDiamond,
         isStoneDirty, isBeadsDirty, isDiamondDirty, filteredCategories, filteredWorkers,
-        refs, handleSave, fetchCategories, fetchWorkers, isLoadingCats, isLoadingWorkers, errors
+        refs, handleSave, fetchCategories, fetchWorkers, isLoadingCats, isLoadingWorkers, errors, diamondList,
+        handleAddDiamond,
+        handleRemoveDiamond, stoneList,
+        handleAddStone,
+        handleRemoveStone,
     } = useStockLogic();
 
     const metalConfig: any = {
-        Gold: {
-            bg: "bg-amber-400 text-amber-950 border-amber-500 shadow-[0_0_15px_rgba(251,191,36,0.3)]",
-            caratActive: "bg-amber-600 text-white shadow-md",
-            caratInactive: "text-amber-800 hover:bg-amber-100",
-            caratContainer: "bg-amber-50/80 border-amber-100",
-            button: "bg-amber-500 hover:bg-amber-600 shadow-amber-100"
-        },
-        Palladium: {
-            bg: "bg-cyan-100 text-cyan-900 border-cyan-300 shadow-[0_0_15px_rgba(207,250,254,0.4)]",
-            button: "bg-cyan-600 hover:bg-cyan-700 shadow-cyan-100"
-        },
-        Platinum: {
-            bg: "bg-indigo-100 text-indigo-950 border-indigo-200 shadow-[0_0_15px_rgba(224,231,255,0.4)]",
-            button: "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100"
-        },
-        Silver: {
-            bg: "bg-slate-200 text-slate-800 border-slate-300 shadow-[0_0_15px_rgba(226,232,240,0.4)]",
-            button: "bg-slate-700 hover:bg-slate-800 shadow-slate-100"
-        }
+        Gold: { bg: "bg-amber-400 text-amber-950 border-amber-500 shadow-sm", caratActive: "bg-amber-600 text-white shadow-md", caratInactive: "text-amber-800 hover:bg-amber-100", caratContainer: "bg-amber-50/80 border-amber-100", button: "bg-amber-500 hover:bg-amber-600 shadow-amber-100" },
+        Palladium: { bg: "bg-cyan-100 text-cyan-900 border-cyan-300", button: "bg-cyan-600 hover:bg-cyan-700" },
+        Platinum: { bg: "bg-indigo-100 text-indigo-950 border-indigo-200", button: "bg-indigo-600 hover:bg-indigo-700" },
+        Silver: { bg: "bg-slate-200 text-slate-800 border-slate-300", button: "bg-slate-700 hover:bg-slate-800" }
     };
 
-    useEffect(() => {
-        if (selectedMetal === "Palladium" && !vals.palladiumPercentage) {
-            setVals((prev: any) => ({ ...prev, palladiumPercentage: "33" }));
+    const checkJump = (val: string, nextRef: any) => {
+        // Regex checks for a decimal point followed by exactly 3 digits
+        if (/\.\d{3}$/.test(val)) {
+            if (nextRef && nextRef.current) {
+                nextRef.current.focus();
+            }
         }
-    }, [selectedMetal, setVals, vals.palladiumPercentage]);
-
-    const checkJump = (val: string, nextRef: React.RefObject<HTMLInputElement | null>) => {
-        if (/\.\d{3}$/.test(val)) nextRef.current?.focus();
     };
-
     if (!mounted) return null;
 
-    const METALS = ["Gold", "Palladium", "Platinum", "Silver"];
-    const GOLD_CARATS = ["24K", "22K", "21K", "20K", "18K", "14K"];
-
     return (
-        <div className="min-h-screen bg-[#F8FAFC] pb-24 md:pb-8 p-4 md:p-8 text-slate-900 antialiased font-sans">
-            <style>{`
-                @keyframes shake {
-                    0%, 100% { transform: translateX(0); }
-                    25% { transform: translateX(-4px); }
-                    75% { transform: translateX(4px); }
-                }
-                .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }
-                input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-                input[type=number] { -moz-appearance: textfield; }
-            `}</style>
-
+        <div className="min-h-screen bg-[#F1F5F9] pb-24 md:pb-8 p-4 md:p-8 text-slate-900 antialiased font-sans">
             <div className="max-w-6xl mx-auto">
-                <header className="mb-8 flex flex-col lg:flex-row lg:items-center justify-between gap-y-6 gap-x-4">
-                    <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 truncate">Product Entry</h1>
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 lg:justify-end">
-                        <div className="flex p-2 items-center gap-3 overflow-x-auto scrollbar-hide">
-                            {selectedMetal === "Gold" && (
-                                <div className={`flex items-center gap-1 backdrop-blur-sm p-1.5 rounded-2xl border shadow-sm shrink-0 ${metalConfig.Gold.caratContainer}`}>
-                                    {GOLD_CARATS.map((carat) => (
-                                        <button
-                                            key={carat}
-                                            onClick={() => setSelectedCarat(carat)}
-                                            className={`px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all ${selectedCarat === carat ? metalConfig.Gold.caratActive : metalConfig.Gold.caratInactive}`}
-                                        >
-                                            {carat}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-
-                            {selectedMetal === "Palladium" && (
-                                <div className="flex items-center gap-2 bg-cyan-50/80 backdrop-blur-sm px-3 py-1.5 rounded-2xl border border-cyan-100 shadow-sm shrink-0">
-                                    <span className="text-[10px] font-bold text-cyan-700 uppercase tracking-wider">Purity %:</span>
-                                    <input
-                                        type="number"
-                                        className="w-16 bg-white border border-cyan-200 rounded-lg px-2 py-1 text-xs font-bold text-cyan-800 outline-none focus:border-cyan-500"
-                                        value={vals.palladiumPercentage || "33"}
-                                        onChange={(e) => setVals({ ...vals, palladiumPercentage: e.target.value })}
-                                    />
-                                </div>
-                            )}
-
-                            <div className="flex items-center gap-1 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm shrink-0">
-                                {METALS.map((metal) => (
-                                    <label key={metal} className="flex items-center cursor-pointer">
-                                        <input type="radio" className="hidden" name="metal" checked={selectedMetal === metal} onChange={() => setSelectedMetal(metal)} />
-                                        <span className={`px-4 py-2 rounded-xl text-[11px] font-bold uppercase border-2 transition-all duration-300 ${selectedMetal === metal ? metalConfig[metal].bg : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
-                                            {metal}
-                                        </span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+                <header className="mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <h1 className="text-2xl font-bold text-slate-800">Product Entry</h1>
+                    <MetalSelector
+                        selectedMetal={selectedMetal} setSelectedMetal={setSelectedMetal}
+                        selectedCarat={selectedCarat} setSelectedCarat={setSelectedCarat}
+                        vals={vals} setVals={setVals} metalConfig={metalConfig}
+                    />
                 </header>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                    <div className="order-2 lg:order-1 lg:col-span-8 space-y-6 bg-white rounded-3xl border border-slate-200 p-5 md:p-8 shadow-sm">
-                        <div className="flex flex-col gap-5">
-                            {/* Row 1: Search & Conditional Target Code Rendering */}
-                            <div className={`grid grid-cols-1 transition-all duration-500 gap-5 ${prodCode ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
-                                <div className="relative" ref={refs.catRef}>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block tracking-widest ml-1">Category Search</label>
-                                    <div className="relative">
-                                        <Search className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors ${errors.cat ? 'text-red-500' : 'text-slate-400'}`} size={18} />
-                                        <input
-                                            type="text"
-                                            className={`w-full pl-11 pr-12 py-3.5 rounded-2xl outline-none text-sm font-medium transition-all border
-                                                ${errors.cat ? 'bg-red-50 border-red-500 animate-shake placeholder:text-red-400' : 'bg-slate-50 border-slate-100 focus:border-blue-500 focus:bg-white'}`}
-                                            placeholder={errors.cat ? "Selection Required" : "Search Category..."}
-                                            value={catSearch}
-                                            onFocus={() => setIsCatOpen(true)}
-                                            onChange={(e) => {
-                                                setCatSearch(e.target.value);
-                                                if (e.target.value === "") setProdCode("");
-                                            }}
-                                        />
-                                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                                            <button onClick={() => setActiveModal('category')} className="p-2 bg-white hover:bg-blue-600 hover:text-white border border-slate-200 text-blue-600 rounded-xl transition-all shadow-sm"><Plus size={16} /></button>
+                    <div className="order-2 lg:order-1 lg:col-span-8 space-y-6">
+                        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                            <ProductCoreForm
+                                {...{
+                                    refs, errors, catSearch, setCatSearch, isCatOpen, setIsCatOpen,
+                                    isLoadingCats, filteredCategories, setProdCode, prodCode, nextItemCode,
+                                    prodDescription, setProdDescription, workerSearch, setWorkerSearch,
+                                    setIsWorkerOpen, isWorkerOpen, isLoadingWorkers, filteredWorkers,
+                                    vals, setVals, setActiveModal
+                                }}
+                            />
+
+                            <div className="mt-6 pt-6 border-t border-slate-100">
+                                <WeightMetrics {...{ vals, setVals, refs, errors, checkJump }} />
+                            </div>
+
+                            <div className="space-y-4 mt-8">
+                                <SectionWrapper
+                                    title="Stone Details"
+                                    icon={Gem}
+                                    show={showStone}
+                                    setShow={setShowStone}
+                                    isDirty={isStoneDirty}
+                                >
+                                    <div className="space-y-4">
+                                        {/* Input Grid */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                            <InputBlock
+                                                label="Stone Name"
+                                                value={vals.sName}
+                                                onChange={(v) => setVals({ ...vals, sName: v })}
+                                                placeholder="Ruby..."
+                                            />
+                                            <InputBlock
+                                                label="Weight (ct)"
+                                                value={vals.sWgt}
+                                                onChange={(v) => { setVals({ ...vals, sWgt: v }); checkJump(v, refs.sQtyRef); }}
+                                                placeholder="0.000"
+                                                type="number"
+                                                inputRef={refs.sWgtRef}
+                                            />
+                                            <InputBlock
+                                                label="Quantity"
+                                                value={vals.sQty}
+                                                onChange={(v) => { setVals({ ...vals, sQty: v }); checkJump(v, refs.sPriceRef); }}
+                                                placeholder="0"
+                                                type="number"
+                                                inputRef={refs.sQtyRef}
+                                            />
+
+                                            {/* Price Field with Add Button */}
+                                            <div className="flex items-end gap-2">
+                                                <div className="flex-1">
+                                                    <InputBlock
+                                                        label="Price"
+                                                        value={vals.sPrice}
+                                                        onChange={(v) => setVals({ ...vals, sPrice: v })}
+                                                        placeholder="0"
+                                                        type="number"
+                                                        inputRef={refs.sPriceRef}
+                                                    />
+                                                </div>
+                                                <button
+                                                    onClick={handleAddStone}
+                                                    type="button"
+                                                    className="h-[38px] w-[38px] mb-[1px] flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-sm transition-all active:scale-95"
+                                                    title="Add Stone"
+                                                >
+                                                    <Plus size={20} />
+                                                </button>
+                                            </div>
                                         </div>
-                                        {isCatOpen && (
-                                            <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl max-h-60 overflow-y-auto p-2">
-                                                {isLoadingCats ? (
-                                                    <div className="flex items-center justify-center p-6"><Loader2 className="animate-spin text-blue-500" size={20} /></div>
-                                                ) : filteredCategories.map(cat => (
-                                                    <div
-                                                        key={cat.id}
-                                                        onMouseDown={() => {
-                                                            setCatSearch(cat.product_name);
-                                                            setProdCode(cat.Abbreviation);
-                                                            setIsCatOpen(false);
-                                                        }}
-                                                        className="px-4 py-3 hover:bg-blue-50 rounded-xl cursor-pointer text-sm font-semibold flex justify-between items-center group"
-                                                    >
-                                                        <div className="flex flex-col">
-                                                            <span className="text-slate-900">{cat.product_name}</span>
-                                                            <span className="text-[9px] text-blue-500 font-mono font-bold uppercase">{cat.product_code}</span>
-                                                        </div>
-                                                        <span className="text-[10px] bg-blue-100 px-2 py-1 rounded text-blue-700 font-black uppercase">{cat.Abbreviation}</span>
-                                                    </div>
-                                                ))}
+
+                                        {/* Stone List Table (Only shows if items exist) */}
+                                        {stoneList.length > 0 && (
+                                            <div className="mt-4 overflow-hidden border border-slate-200 rounded-lg bg-white shadow-sm">
+                                                <table className="w-full text-sm text-left">
+                                                    <thead>
+                                                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 font-semibold">
+                                                            <th className="px-3 py-2">Stone Name</th>
+                                                            <th className="px-3 py-2 text-center">Weight</th>
+                                                            <th className="px-3 py-2 text-center">Qty</th>
+                                                            <th className="px-3 py-2 text-right">Price</th>
+                                                            <th className="px-3 py-2 w-10"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100">
+                                                        {stoneList.map((item) => (
+                                                            <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                                                                <td className="px-3 py-2 text-slate-900 font-medium">{item.name}</td>
+                                                                <td className="px-3 py-2 text-center text-slate-600">{item.weight} ct</td>
+                                                                <td className="px-3 py-2 text-center text-slate-600">{item.qty} pcs</td>
+                                                                <td className="px-3 py-2 text-right font-bold text-slate-800">
+                                                                    {Number(item.price).toLocaleString()}
+                                                                </td>
+                                                                <td className="px-3 py-2 text-center">
+                                                                    <button
+                                                                        onClick={() => handleRemoveStone(item.id)}
+                                                                        className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                    {/* Table Footer with Totals */}
+                                                    <tfoot className="bg-slate-50 font-bold border-t border-slate-200 text-xs uppercase tracking-wider">
+                                                        <tr>
+                                                            <td className="px-3 py-2 text-slate-500">Totals</td>
+                                                            <td className="px-3 py-2 text-center text-blue-700">
+                                                                {stoneList.reduce((acc, cur) => acc + Number(cur.weight || 0), 0).toFixed(3)}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-center text-slate-700">
+                                                                {stoneList.reduce((acc, cur) => acc + Number(cur.qty || 0), 0)}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-right text-emerald-700">
+                                                                {stoneList.reduce((acc, cur) => acc + Number(cur.price || 0), 0).toLocaleString()}
+                                                            </td>
+                                                            <td></td>
+                                                        </tr>
+                                                    </tfoot>
+                                                </table>
                                             </div>
                                         )}
                                     </div>
-                                </div>
+                                </SectionWrapper>
 
-                                {/* Target Item Code: Only shows if prodCode exists */}
-                                {prodCode && (
-                                    <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block tracking-widest ml-1">Target Item Code</label>
-                                        <div className="w-full px-4 py-2.5 bg-white border border-blue-200 rounded-2xl shadow-[0_4px_12px_rgba(59,130,246,0.06)] text-slate-900 text-sm font-mono font-bold flex items-center justify-between min-h-[50px]">
-                                            <div className="flex flex-col">
-                                                <span className="text-[8px] text-blue-500 uppercase tracking-tighter -mb-1">Code Preview</span>
-                                                <span className="text-base">{nextItemCode || "..."}</span>
-                                            </div>
-                                            {nextItemCode && !nextItemCode.includes("...") && (
-                                                <div className="flex items-center gap-3 pl-3 border-l border-slate-100">
-                                                    <Barcode
-                                                        value={nextItemCode}
-                                                        width={0.8}
-                                                        height={22}
-                                                        fontSize={0}
-                                                        background="transparent"
-                                                        lineColor="#1e293b"
-                                                        margin={0}
+                                <SectionWrapper title="Beads Details" icon={CircleDashed} show={showBeads} setShow={setShowBeads} isDirty={isBeadsDirty}>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <InputBlock label="Beads Name" value={vals.bName} onChange={(v) => setVals({ ...vals, bName: v })} placeholder="Pearl..." />
+                                        <InputBlock label="Weight" value={vals.bWgt} onChange={(v) => { setVals({ ...vals, bWgt: v }); checkJump(v, refs.bPriceRef); }} placeholder="0.000" type="number" inputRef={refs.bWgtRef} />
+                                        <InputBlock label="Price" value={vals.bPrice} onChange={(v) => setVals({ ...vals, bPrice: v })} placeholder="0" type="number" inputRef={refs.bPriceRef} />
+                                    </div>
+                                </SectionWrapper>
+
+                                <SectionWrapper
+                                    title="Diamond Details"
+                                    icon={Hammer}
+                                    show={showDiamond}
+                                    setShow={setShowDiamond}
+                                    isDirty={isDiamondDirty}
+                                >
+                                    <div className="space-y-4">
+                                        {/* Input Grid */}
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                            <InputBlock
+                                                label="Diamond Name"
+                                                value={vals.dName}
+                                                onChange={(v) => setVals({ ...vals, dName: v })}
+                                                placeholder="CVD, Natural..."
+                                                onAction={() => setActiveModal('diamond')}
+                                            />
+                                            <InputBlock label="Cut" value={vals.dCut} onChange={(v) => setVals({ ...vals, dCut: v })} placeholder="Ex..." />
+                                            <InputBlock label="Color" value={vals.dColor} onChange={(v) => setVals({ ...vals, dColor: v })} placeholder="G..." />
+                                            <InputBlock label="Clarity" value={vals.dClarity} onChange={(v) => setVals({ ...vals, dClarity: v })} placeholder="VS..." />
+
+                                            <InputBlock
+                                                label="Weight"
+                                                value={vals.dWgt}
+                                                onChange={(v) => { setVals({ ...vals, dWgt: v }); checkJump(v, refs.dPriceRef); }}
+                                                placeholder="0.000"
+                                                type="number"
+                                                inputRef={refs.dWgtRef}
+                                            />
+
+                                            <InputBlock
+                                                label="Rate"
+                                                value={vals.dRate}
+                                                onChange={(v) => setVals({ ...vals, dRate: v })}
+                                                placeholder="0"
+                                                type="number"
+                                            />
+                                            <InputBlock
+                                                label="Quantity"
+                                                value={vals.dQty}
+                                                onChange={(v) => setVals({ ...vals, dQty: v })}
+                                                placeholder="0"
+                                                type="number"
+                                            />
+
+                                            {/* Price Field with Add Button */}
+                                            <div className="flex items-end gap-2">
+                                                <div className="flex-1">
+                                                    <InputBlock
+                                                        label="Price"
+                                                        value={vals.dPrice}
+                                                        onChange={(v) => setVals({ ...vals, dPrice: v })}
+                                                        placeholder="0"
+                                                        type="number"
+                                                        inputRef={refs.dPriceRef}
                                                     />
                                                 </div>
-                                            )}
+                                                <button
+                                                    onClick={handleAddDiamond}
+                                                    type="button"
+                                                    className="h-[38px] w-[38px] mb-[1px] flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm transition-all active:scale-95"
+                                                    title="Add Diamond to List"
+                                                >
+                                                    <Plus size={20} />
+                                                </button>
+                                            </div>
                                         </div>
+
+                                        {/* Diamond List Table */}
+                                        {diamondList.length > 0 && (
+                                            <div className="mt-4 overflow-hidden border border-slate-200 rounded-lg bg-white shadow-sm">
+                                                <table className="w-full text-sm text-left border-collapse">
+                                                    <thead>
+                                                        <tr className="bg-slate-50 border-b border-slate-200">
+                                                            <th className="px-3 py-2 font-semibold text-slate-700">Name</th>
+                                                            <th className="px-3 py-2 font-semibold text-slate-700">Specs</th>
+                                                            <th className="px-3 py-2 font-semibold text-slate-700 text-center">Wgt/Qty</th>
+                                                            <th className="px-3 py-2 font-semibold text-slate-700 text-right">Price</th>
+                                                            <th className="px-3 py-2 text-center text-slate-700 w-10"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100">
+                                                        {diamondList.map((item) => (
+                                                            <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
+                                                                <td className="px-3 py-2 text-slate-900 font-medium">{item.name}</td>
+                                                                <td className="px-3 py-2 text-slate-500 uppercase">
+                                                                    {item.cut} {item.color} {item.clarity}
+                                                                </td>
+                                                                <td className="px-3 py-2 text-slate-600 text-center">
+                                                                    <span className="font-medium text-blue-600">{item.weight}ct</span>
+                                                                    <span className="mx-1">/</span>
+                                                                    <span>{item.qty}p</span>
+                                                                </td>
+                                                                <td className="px-3 py-2 text-right font-bold text-slate-800">
+                                                                    {Number(item.price).toLocaleString()}
+                                                                </td>
+                                                                <td className="px-3 py-2 text-center">
+                                                                    <button
+                                                                        onClick={() => handleRemoveDiamond(item.id)}
+                                                                        className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                    <tfoot className="bg-slate-50 font-bold border-t border-slate-200">
+                                                        <tr>
+                                                            <td colSpan={2} className="px-3 py-2 text-slate-600">Total Diamonds:</td>
+                                                            <td className="px-3 py-2 text-center text-blue-700">
+                                                                {diamondList.reduce((acc, cur) => acc + Number(cur.qty || 0), 0)} pcs
+                                                            </td>
+                                                            <td className="px-3 py-2 text-right text-emerald-700">
+                                                                {diamondList.reduce((acc, cur) => acc + Number(cur.price || 0), 0).toLocaleString()}
+                                                            </td>
+                                                            <td></td>
+                                                        </tr>
+                                                    </tfoot>
+                                                </table>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
+                                </SectionWrapper>
                             </div>
-
-                            <div className="w-full">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block tracking-widest ml-1">Description</label>
-                                <input
-                                    type="text"
-                                    className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 focus:border-blue-500 focus:bg-white rounded-2xl outline-none text-sm font-medium transition-all"
-                                    placeholder="Enter product details..."
-                                    value={prodDescription}
-                                    onChange={(e) => setProdDescription(e.target.value)}
-                                />
-                            </div>
-
-                            <div className="w-full pt-4 border-t border-slate-50 relative" ref={refs.workerRef}>
-                                <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block ml-1 tracking-widest">Worker</label>
-                                <div className="relative w-full sm:max-w-xs md:max-w-[280px]">
-                                    <input
-                                        type="text"
-                                        placeholder="Search Worker"
-                                        className="w-full pl-4 pr-12 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none text-sm focus:bg-white focus:border-blue-500 transition-all font-semibold"
-                                        value={workerSearch}
-                                        onFocus={() => setIsWorkerOpen(true)}
-                                        onChange={(e) => {
-                                            setWorkerSearch(e.target.value);
-                                            setVals({ ...vals, worker: e.target.value });
-                                        }}
-                                    />
-                                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                                        <button onClick={() => setActiveModal('worker')} className="p-2 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-blue-500 transition-colors shadow-sm"><Plus size={16} /></button>
-                                    </div>
-                                    {isWorkerOpen && (
-                                        <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl max-h-48 overflow-y-auto p-2">
-                                            {isLoadingWorkers ? (
-                                                <div className="flex items-center justify-center p-4"><Loader2 className="animate-spin text-slate-400" size={16} /></div>
-                                            ) : filteredWorkers.map(w => (
-                                                <div key={w.id} onMouseDown={() => { setWorkerSearch(w.name); setVals({ ...vals, worker: w.name }); setIsWorkerOpen(false); }} className="px-4 py-3 hover:bg-blue-50 rounded-xl cursor-pointer text-sm font-semibold flex justify-between items-center group">
-                                                    <span className="text-slate-900">{w.name}</span>
-                                                    <span className="text-[9px] bg-slate-100 px-2 py-1 rounded text-blue-600 font-mono font-bold uppercase">{w.worker_code || 'N/A'}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {[
-                                    { label: 'Net Wgt', key: 'netWeight', placeholder: '0.000' },
-                                    { label: 'Wastage %', key: 'wastage', placeholder: '0.000', ref: refs.wastageRef },
-                                    { label: 'Wastage/G', key: 'WastageGram', placeholder: '0.000', ref: refs.WastageGramRef },
-                                    { label: 'Making', key: 'making', placeholder: '0', ref: refs.makingRef },
-                                ].map((field) => (
-                                    <div key={field.key}>
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block ml-1">{field.label}</label>
-                                        <input
-                                            ref={field.ref as any}
-                                            type="number"
-                                            placeholder={field.placeholder}
-                                            className={`w-full px-4 py-3 rounded-2xl outline-none text-sm transition-all font-medium border
-                                                ${(field.key === 'netWeight' && errors.weight) ? 'bg-red-50 border-red-500 animate-shake placeholder:text-red-400' : 'bg-slate-50 border-slate-100 focus:bg-white focus:border-blue-500'}`}
-                                            value={(vals as any)[field.key]}
-                                            onChange={(e) => {
-                                                setVals({ ...vals, [field.key]: e.target.value });
-                                                if (field.label === 'Net Wgt') checkJump(e.target.value, refs.WastageGramRef);
-                                                if (field.label === 'Wastage/G') checkJump(e.target.value, refs.makingRef);
-                                            }}
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 pt-6">
-                            <SectionWrapper title="Stone Details" icon={Gem} show={showStone} setShow={setShowStone} isDirty={isStoneDirty}>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <InputBlock label="Stone Name" value={vals.sName} onChange={(v: string) => setVals({ ...vals, sName: v })} placeholder="Ruby..." />
-                                    <InputBlock label="Weight (Carat)" value={vals.sWgt} onChange={(v: string) => { setVals({ ...vals, sWgt: v }); checkJump(v, refs.sPriceRef); }} placeholder="0.000" type="number" inputRef={refs.sWgtRef} />
-                                    <InputBlock label="Price" value={vals.sPrice} onChange={(v: string) => setVals({ ...vals, sPrice: v })} placeholder="0" type="number" inputRef={refs.sPriceRef} />
-                                </div>
-                            </SectionWrapper>
-
-                            <SectionWrapper title="Beads Details" icon={CircleDashed} show={showBeads} setShow={setShowBeads} isDirty={isBeadsDirty}>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <InputBlock label="Bead Weight" value={vals.bWgt} onChange={(v: string) => { setVals({ ...vals, bWgt: v }); checkJump(v, refs.bPriceRef); }} placeholder="0.000" type="number" />
-                                    <InputBlock label="Price" value={vals.bPrice} onChange={(v: string) => setVals({ ...vals, bPrice: v })} placeholder="0" type="number" inputRef={refs.bPriceRef} />
-                                </div>
-                            </SectionWrapper>
-
-                            <SectionWrapper title="Diamond Details" icon={Hammer} show={showDiamond} setShow={setShowDiamond} isDirty={isDiamondDirty}>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div className="col-span-2"><InputBlock label="Diamond Name" value={vals.dName} onChange={(v: string) => setVals({ ...vals, dName: v })} placeholder="Round Brilliant" /></div>
-                                    <InputBlock label="Weight" value={vals.dWgt} onChange={(v: string) => { setVals({ ...vals, dWgt: v }); checkJump(v, refs.dColorRef); }} placeholder="0.000" type="number" inputRef={refs.dWgtRef} />
-                                    <InputBlock label="Color" value={vals.dColor} onChange={(v: string) => setVals({ ...vals, dColor: v })} placeholder="D-F" inputRef={refs.dColorRef} />
-                                    <InputBlock label="Cut" value={vals.dCut} onChange={(v: string) => setVals({ ...vals, dCut: v })} placeholder="Ex" />
-                                    <InputBlock label="Clarity" value={vals.dClarity} onChange={(v: string) => setVals({ ...vals, dClarity: v })} placeholder="VVS1" />
-                                    <InputBlock label="Rate" value={vals.dRate} onChange={(v: string) => setVals({ ...vals, dRate: v })} placeholder="0" type="number" />
-                                    <InputBlock label="Price" value={vals.dPrice} onChange={(v: string) => setVals({ ...vals, dPrice: v })} placeholder="0" type="number" />
-                                </div>
-                            </SectionWrapper>
                         </div>
                     </div>
 
                     <div className="order-1 lg:order-2 lg:col-span-4 lg:sticky lg:top-8">
-                        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-                            <div className="aspect-square w-full relative rounded-2xl border-2 border-dashed border-slate-100 bg-slate-50 overflow-hidden flex flex-col items-center justify-center group hover:border-blue-300 transition-all mb-6">
-                                {imagePreview ? (
-                                    <><img src={imagePreview} alt="Preview" className="h-full w-full object-cover" /><button onClick={() => setImagePreview(null)} className="absolute top-3 right-3 p-2 bg-white/90 rounded-xl text-red-500 shadow-md"><X size={18} /></button></>
-                                ) : (
-                                    <button type="button" onClick={() => (document.getElementById('file-upload') as HTMLInputElement).click()} className="flex flex-col items-center gap-3 text-slate-400 group-hover:text-blue-500 transition-colors"><div className="p-4 bg-white rounded-full shadow-sm"><Camera size={32} /></div><span className="text-[10px] font-bold uppercase tracking-wider">Upload Image</span></button>
-                                )}
-                                <input id="file-upload" type="file" className="hidden" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => setImagePreview(reader.result as string); reader.readAsDataURL(file); } }} />
-                            </div>
-
-                            <button
-                                onClick={handleSave}
-                                disabled={isSubmitting || !prodCode}
-                                className={`w-full font-bold py-4 rounded-2xl transition-all shadow-xl flex items-center justify-center gap-2
-                                    ${(errors.cat || errors.weight)
-                                        ? 'bg-red-600 hover:bg-red-700 shadow-red-100'
-                                        : !prodCode ? 'bg-slate-300 cursor-not-allowed' : metalConfig[selectedMetal as keyof typeof metalConfig].button
-                                    } 
-                                    text-white disabled:opacity-70`}
-                            >
-                                {isSubmitting ? <><Loader2 className="animate-spin" size={20} /> Saving...</> : (errors.cat || errors.weight ? "Missing Fields" : !prodCode ? "Select Category" : "Update Inventory")}
-                            </button>
-                        </div>
+                        <ImageUploadSidebar {...{ imagePreview, setImagePreview, handleSave, isSubmitting, prodCode, errors, metalConfig, selectedMetal }} />
                     </div>
                 </div>
             </div>
 
             {activeModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-                    <div ref={refs.modalRef} className="relative bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl border border-white/20 overflow-hidden">
-                        <button onClick={() => setActiveModal(null)} className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full text-slate-400 z-10"><X size={20} /></button>
-                        {activeModal === 'category' ? <CategoryForm onSuccess={() => { fetchCategories(); setActiveModal(null); }} /> : <WorkerForm onSuccess={() => { fetchWorkers(); setActiveModal(null); }} />}
+                    <div ref={refs.modalRef} className="relative bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden p-6">
+                        <button onClick={() => setActiveModal(null)} className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full text-slate-400 z-10"><X size={18} /></button>
+
+                        {activeModal === 'category' && <CategoryForm onSuccess={() => { fetchCategories(); setActiveModal(null); }} />}
+                        {activeModal === 'worker' && <WorkerForm onSuccess={() => { fetchWorkers(); setActiveModal(null); }} />}
+
+                        {activeModal === 'diamond' && (
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-bold text-slate-800">New Diamond Name</h3>
+                                <div className="space-y-2">
+                                    <input
+                                        type="text"
+                                        autoFocus
+                                        className="w-full p-2 border rounded outline-none focus:border-blue-500"
+                                        placeholder="e.g. Lab Grown"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                setVals({ ...vals, dName: e.currentTarget.value });
+                                                setActiveModal(null);
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <button
+                                    className="w-full bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700"
+                                    onClick={(e) => {
+                                        const input = e.currentTarget.previousElementSibling?.querySelector('input');
+                                        if (input) {
+                                            setVals({ ...vals, dName: input.value });
+                                            setActiveModal(null);
+                                        }
+                                    }}
+                                >
+                                    Save
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
-        </div>
-    );
-}
-
-function InputBlock({ label, value, onChange, placeholder, type = "text", inputRef }: any) {
-    return (
-        <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block ml-1 tracking-widest">{label}</label>
-            <input ref={inputRef} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none text-sm font-medium focus:bg-white focus:border-blue-500 transition-all appearance-none" type={type} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
-        </div>
-    );
-}
-
-function SectionWrapper({ title, icon: Icon, children, show, setShow, isDirty }: any) {
-    const handleToggle = () => { if (!isDirty) setShow(!show); };
-    const activeShow = isDirty || show;
-    return (
-        <div className={`rounded-2xl border transition-all duration-300 ${activeShow ? 'border-blue-100 bg-blue-50/10' : 'border-slate-100 bg-white'}`}>
-            <button type="button" onClick={handleToggle} className={`w-full flex items-center justify-between p-4 text-left ${isDirty ? 'cursor-default' : 'cursor-pointer'}`}>
-                <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${activeShow ? 'bg-blue-500 text-white' : 'bg-slate-50 text-slate-400'}`}><Icon size={16} /></div>
-                    <div className="flex flex-col"><span className={`text-sm font-bold ${activeShow ? 'text-blue-900' : 'text-slate-600'}`}>{title}</span>{isDirty && <span className="text-[9px] text-blue-500 font-bold uppercase tracking-tighter">Locked</span>}</div>
-                </div>
-                {isDirty ? <Lock size={16} className="text-blue-500" /> : (activeShow ? <ChevronUp size={18} className="text-blue-400" /> : <ChevronDown size={18} className="text-slate-300" />)}
-            </button>
-            {activeShow && <div className="p-4 pt-0 animate-in fade-in slide-in-from-top-1 duration-200">{children}</div>}
         </div>
     );
 }

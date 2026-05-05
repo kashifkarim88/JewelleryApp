@@ -1,6 +1,6 @@
 "use client"
 import React, { useState } from 'react';
-import { Loader2, Search, RefreshCcw, Package } from 'lucide-react'; // Added RefreshCcw for clear session
+import { Loader2, Search, RefreshCcw, Package } from 'lucide-react';
 import { useBilling } from '../hooks/useBilling';
 import { FullInput } from './_billing/BillingComponents';
 import { SectionHeader } from './_billing/SectionHeader';
@@ -13,26 +13,20 @@ function InvoicePage() {
         customer, setCustomer, goldRate, setGoldRate,
         discount, itemDiscountsSum, extraDiscount, setExtraDiscount,
         exchangeValue, setExchangeValue,
-        advance,
-        setAdvance,
-        totalAdvance, // ADD THIS: This is the combined sum (Global + Items)
+        advance, setAdvance,
+        totalAdvance,
         itemInput, setItemInput, isFetching, cart, fetchItem,
         updateItemDetail, removeItem, calculateItemPrice, calculateAddons,
-        finalTotal, clearSession
+        finalTotal, clearSession, updateNestedDetail
     } = useBilling();
 
     const [editId, setEditId] = useState<string | null>(null);
     const [printData, setPrintData] = useState<{ items: any[], isSingle: boolean } | null>(null);
 
-    // Modernized Print Handler
     const handlePrint = (items: any[], isSingle: boolean) => {
         setPrintData({ items, isSingle });
-
-        // Use a slight delay to ensure the PrintInvoice component renders the latest data before the print dialog opens
         setTimeout(() => {
             window.print();
-
-            // Logic for clearing session only after a Full Invoice Print
             if (!isSingle && items.length > 0) {
                 setTimeout(() => {
                     if (window.confirm("Invoice generated successfully. Would you like to clear the current bill?")) {
@@ -45,28 +39,26 @@ function InvoicePage() {
 
     return (
         <>
-            {/* Hidden from UI, only visible to the printer */}
             <PrintInvoice
                 customer={customer}
                 goldRate={goldRate}
                 cart={printData?.items || cart}
                 discount={printData?.isSingle ? 0 : discount}
-                // Pass advanced values to the invoice
                 exchangeValue={exchangeValue}
                 advance={advance}
                 finalTotal={finalTotal}
             />
 
             <div className="print:hidden min-h-screen bg-[#F8FAFC] p-4 lg:p-8 text-slate-900 antialiased">
-                <div className="max-w-350 mx-auto">
+                <div className="max-w-[1600px] mx-auto"> {/* Wider container for better distribution */}
 
-                    {/* Header with Gold Rate Control */}
                     <SectionHeader goldRate={goldRate} setGoldRate={setGoldRate} />
 
-                    <div className="flex flex-col lg:flex-row gap-8 items-start mt-8">
+                    {/* MAIN LAYOUT CONTAINER */}
+                    <div className="flex flex-col lg:flex-row gap-6 items-start mt-8">
 
-                        {/* LEFT COLUMN: Customer Info & Items */}
-                        <div className="flex-1 w-full space-y-6">
+                        {/* LEFT COLUMN: Takes up the majority of the space (flex-3) */}
+                        <div className="flex-[3] w-full space-y-6">
 
                             {/* Customer & Search Bar */}
                             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
@@ -137,6 +129,7 @@ function InvoicePage() {
                                                 onPrint={() => handlePrint([item], true)}
                                                 itemTotal={calculateItemPrice(item)}
                                                 stonesTotal={calculateAddons(item)}
+                                                onNestedUpdate={updateNestedDetail}
                                             />
                                         ))}
                                     </div>
@@ -144,8 +137,8 @@ function InvoicePage() {
                             </div>
                         </div>
 
-                        {/* RIGHT COLUMN: Summary & Advanced Billing */}
-                        <div className="w-full lg:w-100 sticky top-8">
+                        {/* RIGHT COLUMN: Smaller width for the summary (w-80) */}
+                        <div className="w-full lg:w-80 sticky top-8 flex-shrink-0">
                             <BillingSummary
                                 cart={cart}
                                 discount={discount}

@@ -30,27 +30,27 @@ model Category{
 model StockItem {
   id              String   @id @default(cuid())
   createdAt       DateTime @default(now())
-  // Core Fields
-  itemCode        String @unique
-  metal           String   // Gold, Silver, Palladium, etc.
-  carat           String?  // 21K, 18K (Mainly for Gold)
-  purity          Float?   // Added for Palladium purity % (e.g., 95.0)
+  itemCode        String   @unique
+  metal           String   
+  carat           String?  
+  purity          Float?   
   categoryName    String
   productCode     String
   description     String?
   workerName      String
   
-  // Measurements
   netWeight       Float
   wastageGram     Float
   wastagePercent  Float
   making          Float
   imageUrl        String?
 
-  // Optional Detail Sections
-  stoneDetails    StoneDetail?
+  // UPDATED: Changed from Optional (?) to Array ([])
+  stoneDetails    StoneDetail[]
+  diamondDetails  DiamondDetail[]
+  
+  // Kept as Optional (?) assuming only one type of bead entry is needed
   beadDetails     BeadDetail?
-  diamondDetails  DiamondDetail?
 }
 
 model StoneDetail {
@@ -58,19 +58,10 @@ model StoneDetail {
   name        String?
   weight      Float?
   price       Float?
+  squantity   Int?
   
   // Relation back to StockItem
-  stockItemId String    @unique
-  stockItem   StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
-}
-
-model BeadDetail {
-  id          String    @id @default(cuid())
-  weight      Float?
-  price       Float?
-  
-  // Relation back to StockItem
-  stockItemId String    @unique
+  stockItemId String    // REMOVED @unique here
   stockItem   StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
 }
 
@@ -83,8 +74,19 @@ model DiamondDetail {
   clarity     String?
   rate        Float?
   price       Float?
+  dquantity   Int?
   
   // Relation back to StockItem
+  stockItemId String    // REMOVED @unique here
+  stockItem   StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
+}
+
+// BeadDetail remains the same if it's always a single entry
+model BeadDetail {
+  id          String    @id @default(cuid())
+  weight      Float?
+  price       Float?
+  
   stockItemId String    @unique
   stockItem   StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
 }
