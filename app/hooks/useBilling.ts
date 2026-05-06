@@ -1,14 +1,27 @@
 import { useState, useEffect, useMemo } from 'react';
 
 export interface DetailSection {
-    id?: string; name?: string; weight?: number; price?: number;
-    color?: string; clarity?: string; cut?: string; rate?: number; squantity?: number;
+    id?: string;
+    name?: string;
+    weight?: number;
+    price?: number;
+    color?: string;
+    clarity?: string;
+    cut?: string;
+    rate?: number;
+    squantity?: number;
     dquantity?: number;
 }
 
 export interface CartItem {
-    id: string; itemCode: string; productCode?: string; categoryName: string;
-    carat: string; metal: string; netWeight: number; wastagePercent: number;
+    id: string;
+    itemCode: string;
+    productCode?: string;
+    categoryName: string;
+    carat: string;
+    metal: string;
+    netWeight: number;
+    wastagePercent: number;
     making: number;
     discount?: number;
     advance?: number;
@@ -21,11 +34,15 @@ export const useBilling = () => {
     const getSaved = (key: string, fallback: any) => {
         if (typeof window === "undefined") return fallback;
         const saved = sessionStorage.getItem(key);
-        try { return saved ? JSON.parse(saved) : fallback; } catch { return fallback; }
+        try {
+            return saved ? JSON.parse(saved) : fallback;
+        } catch {
+            return fallback;
+        }
     };
 
+    // Customer & Main States
     const [customer, setCustomer] = useState(() => getSaved('bill_customer', { name: '', phone: '' }));
-    const [goldRate, setGoldRate] = useState<number>(() => getSaved('bill_goldRate', 0));
     const [exchangeValue, setExchangeValue] = useState<number>(() => getSaved('bill_exchangeValue', 0));
     const [cart, setCart] = useState<CartItem[]>(() => getSaved('bill_cart', []));
     const [extraDiscount, setExtraDiscount] = useState<number>(() => getSaved('bill_extraDiscount', 0));
@@ -33,21 +50,30 @@ export const useBilling = () => {
     const [itemInput, setItemInput] = useState("");
     const [isFetching, setIsFetching] = useState(false);
 
+    // Metal Rates States
+    const [goldRate, setGoldRate] = useState<number>(() => getSaved('bill_goldRate', 0));
+    const [silverRate, setSilverRate] = useState<number>(() => getSaved('bill_silverRate', 0));
+    const [platinumRate, setPlatinumRate] = useState<number>(() => getSaved('bill_platinumRate', 0));
+    const [palladiumRate, setPalladiumRate] = useState<number>(() => getSaved('bill_palladiumRate', 0));
+
+    // Session Persistence
     useEffect(() => {
         sessionStorage.setItem('bill_customer', JSON.stringify(customer));
         sessionStorage.setItem('bill_goldRate', JSON.stringify(goldRate));
+        sessionStorage.setItem('bill_silverRate', JSON.stringify(silverRate));
+        sessionStorage.setItem('bill_platinumRate', JSON.stringify(platinumRate));
+        sessionStorage.setItem('bill_palladiumRate', JSON.stringify(palladiumRate));
         sessionStorage.setItem('bill_exchangeValue', JSON.stringify(exchangeValue));
         sessionStorage.setItem('bill_cart', JSON.stringify(cart));
         sessionStorage.setItem('bill_extraDiscount', JSON.stringify(extraDiscount));
         sessionStorage.setItem('bill_advance', JSON.stringify(advance));
-    }, [customer, goldRate, exchangeValue, cart, extraDiscount, advance]);
+    }, [customer, goldRate, silverRate, platinumRate, palladiumRate, exchangeValue, cart, extraDiscount, advance]);
 
-    // Sum of all individual item discounts
+    // Totals logic
     const itemDiscountsSum = useMemo(() =>
         cart.reduce((sum, item) => sum + (Number(item.discount) || 0), 0)
         , [cart]);
 
-    // NEW: Sum of all individual item advances
     const itemAdvancesSum = useMemo(() =>
         cart.reduce((sum, item) => sum + (Number(item.advance) || 0), 0)
         , [cart]);
@@ -60,25 +86,36 @@ export const useBilling = () => {
     };
 
     const calculateItemBasePrice = (item: CartItem) => {
-        const ratePerGram = (goldRate || 0) / 11.664;
+        // Select rate based on the metal type from API
+        let activeRate = 0;
+        const metalType = item.metal?.toLowerCase();
+
+        switch (metalType) {
+            case 'silver': activeRate = silverRate; break;
+            case 'platinum': activeRate = platinumRate; break;
+            case 'palladium': activeRate = palladiumRate; break;
+            default: activeRate = goldRate; // Defaults to Gold for everything else
+        }
+
+        const ratePerGram = (activeRate || 0) / 11.664;
         const totalWeight = Number(item.netWeight || 0) + (Number(item.wastagePercent || 0) * Number(item.netWeight || 0) / 100);
+
         return (totalWeight * ratePerGram) + (Number(item.making) || 0) + calculateAddons(item);
     };
 
     const subTotal = useMemo(() =>
         cart.reduce((a, b) => a + calculateItemBasePrice(b), 0)
-        , [cart, goldRate]);
+        , [cart, goldRate, silverRate, platinumRate, palladiumRate]);
 
-    // FINAL TOTAL: Gross - (All Discounts) - Exchange - (All Advances)
     const finalTotal = subTotal - itemDiscountsSum - extraDiscount - exchangeValue - itemAdvancesSum - advance;
 
     const calculateItemPrice = (item: CartItem) => {
         const base = calculateItemBasePrice(item);
-        // Display price per item card (Base - Item Discount - Item Advance)
         const final = base - Number(item.discount || 0) - Number(item.advance || 0);
         return final > 0 ? final : 0;
     };
 
+    // Item Management Actions
     const fetchItem = async (e: React.FormEvent) => {
         e.preventDefault();
         const query = itemInput.trim().toUpperCase();
@@ -87,14 +124,12 @@ export const useBilling = () => {
         try {
             const res = await fetch(`/api/stocks?itemCode=${query}`);
             const data = await res.json();
-            console.log("Fetched item data:", data);
             if (res.ok) {
                 if (!cart.some(i => i.itemCode === data.itemCode)) {
                     setCart(prev => [{
                         ...data,
                         discount: 0,
                         advance: 0,
-                        // Ensure these are always arrays even if API returns null
                         stoneDetails: data.stoneDetails || [],
                         diamondDetails: data.diamondDetails || []
                     }, ...prev]);
@@ -147,6 +182,9 @@ export const useBilling = () => {
     return {
         customer, setCustomer,
         goldRate, setGoldRate,
+        silverRate, setSilverRate,
+        platinumRate, setPlatinumRate,
+        palladiumRate, setPalladiumRate,
         cart, setCart,
         itemInput, setItemInput,
         isFetching, fetchItem,
@@ -155,9 +193,9 @@ export const useBilling = () => {
         extraDiscount, setExtraDiscount,
         advance, setAdvance,
         itemDiscountsSum,
-        itemAdvancesSum, // Exported
+        itemAdvancesSum,
         discount: itemDiscountsSum + extraDiscount,
-        totalAdvance: itemAdvancesSum + advance, // Combined advance
+        totalAdvance: itemAdvancesSum + advance,
         calculateItemPrice,
         calculateAddons,
         subTotal,

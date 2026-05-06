@@ -81,7 +81,7 @@ export const CartItemCard = memo(({
 
                     <div className="flex flex-col lg:flex-row">
                         {/* LEFT SIDEBAR - The scrolling happens here globally */}
-                        <div className="w-full lg:w-80 bg-slate-50/50 p-5 border-r border-slate-100 flex flex-col gap-4 overflow-y-auto max-h-[85vh] custom-scrollbar">
+                        <div className="w-full lg:w-80 bg-slate-50/50 p-5 border-r border-slate-100 flex flex-col gap-4">
 
                             {/* ITEM IMAGE */}
                             <div className="w-full aspect-square bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden group relative shrink-0">
