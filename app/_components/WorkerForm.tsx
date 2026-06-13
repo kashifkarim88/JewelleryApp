@@ -3,10 +3,11 @@ import React, { useEffect, useState, useCallback } from "react";
 import { User, Phone, Hash, Briefcase, CheckCircle2 } from "lucide-react";
 
 interface WorkerFormProps {
-    onSuccess?: () => void;
+    worker?: any; // For editing mode if data is passed down
+    onWorkerCreated?: () => void; // The safe callback to refresh parent state
 }
 
-export default function WorkerForm({ onSuccess }: WorkerFormProps) {
+export default function WorkerForm({ worker, onWorkerCreated }: WorkerFormProps) {
     const [name, setName] = useState("");
     const [phone, setPhone] = useState("");
     const [code, setCode] = useState("");
@@ -14,7 +15,17 @@ export default function WorkerForm({ onSuccess }: WorkerFormProps) {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
 
+    // Populate values if an existing worker is supplied for editing
+    useEffect(() => {
+        if (worker) {
+            setName(worker.name || "");
+            setPhone(worker.phone_number || "");
+            setCode(worker.worker_code || "");
+        }
+    }, [worker]);
+
     const refreshNextCode = useCallback(async () => {
+        if (worker) return; // Don't overwrite the code if we are in edit mode
         try {
             const res = await fetch("/api/workers/check");
             const data = await res.json();
@@ -24,7 +35,7 @@ export default function WorkerForm({ onSuccess }: WorkerFormProps) {
         } catch (err) {
             console.error("Failed to fetch next worker code");
         }
-    }, []);
+    }, [worker]);
 
     useEffect(() => {
         refreshNextCode();
@@ -41,8 +52,12 @@ export default function WorkerForm({ onSuccess }: WorkerFormProps) {
             setError("");
             setSuccess(false);
 
-            const res = await fetch("/api/workers", {
-                method: "POST",
+            // Dynamically change routing/methods based on Edit vs Create modes
+            const url = worker ? `/api/workers/${worker.id}` : "/api/workers";
+            const method = worker ? "PUT" : "POST";
+
+            const res = await fetch(url, {
+                method: method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name,
@@ -57,17 +72,16 @@ export default function WorkerForm({ onSuccess }: WorkerFormProps) {
                 setError(data.error || "Something went wrong");
             } else {
                 setSuccess(true);
-                setName("");
-                setPhone("");
 
-                // 1. Get next code ready
-                await refreshNextCode();
+                // Clear inputs only if creating a brand new record
+                if (!worker) {
+                    setName("");
+                    setPhone("");
+                    await refreshNextCode();
+                }
 
-                // 2. Refresh the list in the background
-                if (onSuccess) onSuccess();
-
-                // 3. Keep modal open for a brief success message then auto-close handled by parent usually, 
-                // but here we wait for parent to close via the onSuccess call if set.
+                // Fires trigger pipeline up to StockModals -> StockPage
+                if (onWorkerCreated) onWorkerCreated();
             }
         } catch (error) {
             setError("Network error. Please try again.");
@@ -81,9 +95,11 @@ export default function WorkerForm({ onSuccess }: WorkerFormProps) {
             <div className="mb-8">
                 <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
                     <Briefcase size={20} className="text-blue-600" />
-                    New Worker
+                    {worker ? "Edit Worker Details" : "New Worker"}
                 </h2>
-                <p className="text-xs text-slate-500 mt-1">Register a new employee to the system.</p>
+                <p className="text-xs text-slate-500 mt-1">
+                    {worker ? "Modify employee information saved on the system." : "Register a new employee to the system."}
+                </p>
             </div>
 
             {error && (
@@ -96,7 +112,7 @@ export default function WorkerForm({ onSuccess }: WorkerFormProps) {
             {success && (
                 <div className="mb-6 p-3 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-2xl text-sm flex items-center gap-2">
                     <CheckCircle2 size={16} />
-                    Worker added successfully!
+                    {worker ? "Worker updated successfully!" : "Worker added successfully!"}
                 </div>
             )}
 
@@ -130,7 +146,7 @@ export default function WorkerForm({ onSuccess }: WorkerFormProps) {
                 disabled={loading}
                 className="w-full mt-8 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
             >
-                {loading ? "Registering..." : "Register Worker"}
+                {loading ? "Processing..." : worker ? "Save Changes" : "Register Worker"}
             </button>
         </div>
     );

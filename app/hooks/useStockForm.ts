@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect, useMemo, useRef } from 'react';
 
-export function useStockLogic() {
+export function useStockLogic(stoneTrigger?: number) {
     const [mounted, setMounted] = useState(false);
     const [categories, setCategories] = useState<any[]>([]);
     const [isLoadingCats, setIsLoadingCats] = useState(true);
@@ -31,6 +31,9 @@ export function useStockLogic() {
 
     const [errors, setErrors] = useState<{ cat?: boolean; weight?: boolean }>({});
 
+    const [stoneTypes, setStoneTypes] = useState<any[]>([]);
+    const [isLoadingStones, setIsLoadingStones] = useState(false);
+
     const [vals, setVals] = useState({
         worker: "", making: "", netWeight: "", WastageGram: "", wastage: "", palladiumPercentage: "",
         // Stone Buffer
@@ -56,10 +59,31 @@ export function useStockLogic() {
         dColorRef: useRef<HTMLInputElement>(null),
         dPriceRef: useRef<HTMLInputElement>(null),
         bWgtRef: useRef<HTMLInputElement>(null),
+        dRateRef: useRef<HTMLInputElement>(null),
+        dQtyRef: useRef<HTMLInputElement>(null),
     };
 
-    // --- List Handlers ---
 
+    const fetchStones = async () => {
+        try {
+            setIsLoadingStones(true);
+            const res = await fetch('/api/stones', { cache: 'no-store' }); // Break NextJS cache
+            if (res.ok) {
+                const data = await res.json();
+                setStoneTypes(data);
+            }
+        } catch (err) {
+            console.error("Error fetching stones:", err);
+        } finally {
+            setIsLoadingStones(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchStones();
+    }, [stoneTrigger ?? 0]); // Refetch stones when the trigger changes (e.g., after adding a new stone)
+
+    // --- List Handlers ---
     const handleAddStone = () => {
         if (!vals.sName || !vals.sWgt) return;
         const newStone = {
@@ -90,7 +114,6 @@ export function useStockLogic() {
     };
 
     // --- Logical Checks ---
-
     const isStoneDirty = useMemo(() => !!(vals.sName || vals.sWgt || vals.sPrice) || stoneList.length > 0, [vals, stoneList]);
     const isBeadsDirty = useMemo(() => !!(vals.bWgt || vals.bPrice), [vals]);
     const isDiamondDirty = useMemo(() => !!(vals.dName || vals.dWgt || vals.dColor || vals.dCut || vals.dClarity || vals.dRate || vals.dPrice) || diamondList.length > 0, [vals, diamondList]);
@@ -105,7 +128,6 @@ export function useStockLogic() {
     }, [vals.netWeight, errors.weight]);
 
     // --- Fetchers ---
-
     const fetchNextCode = async (prefix: string) => {
         if (!prefix) return;
         try {
@@ -141,7 +163,6 @@ export function useStockLogic() {
         const handleClickOutside = (event: MouseEvent) => {
             if (refs.catRef.current && !refs.catRef.current.contains(event.target as Node)) setIsCatOpen(false);
             if (refs.workerRef.current && !refs.workerRef.current.contains(event.target as Node)) setIsWorkerOpen(false);
-            if (refs.modalRef.current && !refs.modalRef.current.contains(event.target as Node)) setActiveModal(null);
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -156,7 +177,6 @@ export function useStockLogic() {
     }, [workers, workerSearch]);
 
     // --- Final Save Logic ---
-
     const handleSave = async () => {
         const newErrors = { cat: !catSearch, weight: !vals.netWeight };
         if (newErrors.cat || newErrors.weight) { setErrors(newErrors); return; }
@@ -166,7 +186,6 @@ export function useStockLogic() {
             let finalDescription = prodDescription;
             if (vals.bName) finalDescription += ` | Beads: ${vals.bName}`;
 
-            // Aggregate Quantities
             const totalSQty = stoneList.length > 0 ? stoneList.reduce((acc, cur) => acc + Number(cur.qty || 0), 0).toString() : vals.sQty;
             const totalDQty = diamondList.length > 0 ? diamondList.reduce((acc, cur) => acc + Number(cur.qty || 0), 0).toString() : vals.dQty;
 
@@ -182,19 +201,18 @@ export function useStockLogic() {
                 netWeight: vals.netWeight,
                 wastageGram: vals.WastageGram,
                 wastagePercent: vals.wastage,
+                quantity: "1",
                 squantity: totalSQty,
                 dquantity: totalDQty,
                 making: vals.making,
                 imageUrl: imagePreview,
-                // Stone Mapping
                 stoneData: stoneList.length > 0
-                    ? stoneList.map(s => ({ name: s.name, weight: s.weight, price: s.price }))
-                    : (isStoneDirty ? [{ name: vals.sName, weight: vals.sWgt, price: vals.sPrice }] : null),
-                beadData: isBeadsDirty ? { weight: vals.bWgt, price: vals.bPrice } : null,
-                // Diamond Mapping
+                    ? stoneList.map(s => ({ name: s.name, weight: s.weight, qty: s.qty, price: s.price }))
+                    : (isStoneDirty ? [{ name: vals.sName, weight: vals.sWgt, qty: vals.sQty, price: vals.sPrice }] : null),
+                beadData: isBeadsDirty ? { name: vals.bName, weight: vals.bWgt, price: vals.bPrice } : null,
                 diamondData: diamondList.length > 0
-                    ? diamondList.map(d => ({ name: d.name, weight: d.weight, color: d.color, cut: d.cut, clarity: d.clarity, rate: d.rate, price: d.price }))
-                    : (isDiamondDirty ? [{ name: vals.dName, weight: vals.dWgt, color: vals.dColor, cut: vals.dCut, clarity: vals.dClarity, rate: vals.dRate, price: vals.dPrice }] : null),
+                    ? diamondList.map(d => ({ name: d.name, weight: d.weight, color: d.color, cut: d.cut, clarity: d.clarity, rate: d.rate, qty: d.qty, price: d.price }))
+                    : (isDiamondDirty ? [{ name: vals.dName, weight: vals.dWgt, color: vals.dColor, cut: vals.dCut, clarity: vals.dClarity, rate: vals.dRate, qty: vals.dQty, price: vals.dPrice }] : null),
             };
 
             const res = await fetch('/api/stocks', {
@@ -206,9 +224,8 @@ export function useStockLogic() {
             if (res.ok) {
                 alert("Inventory Updated Successfully!");
                 setVals({
-                    worker: "", making: "", netWeight: "", WastageGram: "", wastage: "",
-                    palladiumPercentage: "", sName: "", sWgt: "", sQty: "", sPrice: "",
-                    bName: "", bWgt: "", bPrice: "",
+                    worker: "", making: "", netWeight: "", WastageGram: "", wastage: "", palladiumPercentage: "",
+                    sName: "", sWgt: "", sQty: "", sPrice: "", bName: "", bWgt: "", bPrice: "",
                     dName: "", dCut: "", dColor: "", dClarity: "", dWgt: "", dRate: "", dQty: "", dPrice: ""
                 });
                 setStoneList([]);
@@ -218,7 +235,12 @@ export function useStockLogic() {
                 setCatSearch("");
                 setProdCode("");
                 setErrors({});
+                setShowStone(false);
+                setShowBeads(false);
+                setShowDiamond(false);
             }
+        } catch (e) {
+            console.error("Critical entry save failure:", e);
         } finally { setIsSubmitting(false); }
     };
 
@@ -235,7 +257,7 @@ export function useStockLogic() {
         showStone, setShowStone, showBeads, setShowBeads, showDiamond, setShowDiamond,
         isStoneDirty, isBeadsDirty, isDiamondDirty, filteredCategories, filteredWorkers,
         refs, handleSave, fetchCategories, fetchWorkers, isLoadingCats, isLoadingWorkers, errors,
-        diamondList, handleAddDiamond, handleRemoveDiamond,
-        stoneList, handleAddStone, handleRemoveStone
+        diamondList, handleAddDiamond, handleRemoveDiamond, stoneList, handleAddStone, handleRemoveStone, stoneTypes,
+        isLoadingStones, fetchStones,
     };
 }

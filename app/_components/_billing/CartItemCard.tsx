@@ -165,47 +165,165 @@ export const CartItemCard = memo(({
                         </div>
 
                         {/* RIGHT MAIN PANEL */}
-                        <div className="flex-1 p-8 flex flex-col bg-white overflow-y-auto max-h-[85vh]">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-8 mb-12">
-                                <FullInput icon={Scale} label="Net Weight (G)" value={item.netWeight} isNumber onChange={(v) => onUpdate(index, 'netWeight', '', v)} />
-                                <FullInput icon={Percent} label="Wastage (%)" value={item.wastagePercent} isNumber onChange={(v) => onUpdate(index, 'wastagePercent', '', v)} />
-                                <div className="opacity-60">
-                                    <FullInput label="Wastage Grams" value={wastageGrams.toFixed(3)} disabled onChange={() => { }} />
-                                </div>
+                        <div className="flex-1 p-6 flex flex-col bg-white overflow-hidden justify-between ">
 
-                                <FullInput icon={Banknote} label="Labour / Making" value={item.making} isNumber onChange={(v) => onUpdate(index, 'making', '', v)} />
-                                <div className="opacity-60">
-                                    <FullInput label="Stone Cost" value={stonesTotal} disabled onChange={() => { }} />
-                                </div>
-                                <FullInput icon={User} label="Worker Name" value={item.workerName} onChange={(v) => onUpdate(index, 'workerName', '', v)} />
-
-                                <FullInput label="Discount (Rs)" value={item.discount || ''} isNumber onChange={(v) => onUpdate(index, 'discount', '', v)} />
-                                <FullInput label="Advance (Rs)" value={item.advance || ''} isNumber onChange={(v) => onUpdate(index, 'advance', '', v)} />
-                            </div>
-
-                            <div className="mt-auto pt-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/50 -mx-8 -mb-8 px-8 py-5">
-                                {/* Compact Total Display */}
-                                <div className="flex items-center gap-4">
-                                    <div className="h-10 w-1 bg-indigo-600 rounded-full" />
-                                    <div>
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block leading-none mb-1">
-                                            Item Total
-                                        </span>
-                                        <div className="flex items-baseline gap-1.5">
-                                            <span className="text-xs font-bold text-indigo-600">Rs.</span>
-                                            <span className="text-2xl font-black text-slate-900 tracking-tighter leading-none">
-                                                {Math.round(itemTotal).toLocaleString()}
-                                            </span>
+                            {/* Strict Vertical Column Flow - Spaced dynamically to fill available height */}
+                            <div className="flex-1 flex flex-col my-2 space-y-1">
+                                {/* 1. Net Weight */}
+                                <div className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50/80 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                            <Scale size={16} />
                                         </div>
+                                        <span className="text-[11px] font-black text-slate-600 uppercase tracking-tight">Net Weight (G)</span>
+                                    </div>
+                                    <div className="w-36">
+                                        <FullInput
+                                            label=""
+                                            value={item.netWeight}
+                                            isNumber
+                                            onChange={(v) => onUpdate(index, 'netWeight', '', v)}
+                                        />
                                     </div>
                                 </div>
 
-                                {/* Modern Compact Button */}
+                                {/* 2. Wastage % */}
+                                <div className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50/80 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                            <Percent size={16} />
+                                        </div>
+                                        <span className="text-[11px] font-black text-slate-600 uppercase tracking-tight">Wastage (%)</span>
+                                    </div>
+                                    <div className="w-36">
+                                        <FullInput
+                                            label=""
+                                            value={item.wastagePercent}
+                                            isNumber
+                                            onChange={(v) => onUpdate(index, 'wastagePercent', '', v)}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* 3. Wastage Grams (Calculated Output) */}
+                                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50/50 border border-dashed border-slate-200/60">
+                                    <div className="flex items-center gap-3 pl-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">Wastage Grams</span>
+                                    </div>
+                                    <div className="w-36 opacity-65">
+                                        <FullInput
+                                            label=""
+                                            value={wastageGrams.toFixed(3)}
+                                            disabled
+                                            onChange={() => { }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* 4. Stone Price (Calculated Output) */}
+                                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50/50 border border-dashed border-slate-200/60">
+                                    <div className="flex items-center gap-3 pl-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">Stone Price</span>
+                                    </div>
+                                    <div className="w-36 opacity-65">
+                                        <FullInput
+                                            label=""
+                                            value={stonesTotal}
+                                            disabled
+                                            onChange={() => { }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* 5. Labour / Making */}
+                                <div className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50/80 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                                            <Banknote size={16} />
+                                        </div>
+                                        <span className="text-[11px] font-black text-slate-600 uppercase tracking-tight">Labour / Making</span>
+                                    </div>
+                                    <div className="w-36">
+                                        <FullInput
+                                            label=""
+                                            value={item.making}
+                                            isNumber
+                                            onChange={(v) => onUpdate(index, 'making', '', v)}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* 6. Advance */}
+                                <div className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50/80 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 font-black text-xs">
+                                            A
+                                        </div>
+                                        <span className="text-[11px] font-black text-slate-600 uppercase tracking-tight">Advance (Rs)</span>
+                                    </div>
+                                    <div className="w-36">
+                                        <FullInput
+                                            label=""
+                                            value={item.advance || ''}
+                                            isNumber
+                                            onChange={(v) => onUpdate(index, 'advance', '', v)}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* 7. Discount */}
+                                <div className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50/80 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600 font-black text-xs">
+                                            D
+                                        </div>
+                                        <span className="text-[11px] font-black text-slate-600 uppercase tracking-tight">Discount (Rs)</span>
+                                    </div>
+                                    <div className="w-36">
+                                        <FullInput
+                                            label=""
+                                            value={item.discount || ''}
+                                            isNumber
+                                            onChange={(v) => onUpdate(index, 'discount', '', v)}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Worker Metadata Field */}
+                                <div className="pt-2 border-t border-slate-100/80 mt-1">
+                                    <FullInput
+                                        icon={User}
+                                        label="Worker Assignment"
+                                        value={item.workerName}
+                                        disabled={true}
+                                        onChange={(v) => onUpdate(index, 'workerName', '', v)}
+                                    />
+                                </div>
+
+                            </div>
+
+                            {/* Modern Compact Billing Footer - Total Display and Print Button Included Here */}
+                            <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between relative z-10">
+                                <div>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block leading-none mb-1.5">
+                                        Item Total
+                                    </span>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-xs font-bold text-indigo-600">Rs.</span>
+                                        <span className="text-2xl font-black text-slate-900 tracking-tight leading-none">
+                                            {Math.round(itemTotal).toLocaleString()}
+                                        </span>
+                                    </div>
+                                </div>
+
                                 <button
                                     onClick={onPrint}
-                                    className="group flex items-center gap-2 px-6 py-3 bg-[#24304e] hover:bg-indigo-600 text-white rounded-xl text-[11px] font-black uppercase transition-all duration-300 shadow-lg shadow-indigo-100 active:scale-95"
+                                    type="button" // Ensures no form-submission side effects interfere with the function
+                                    className="group flex items-center gap-2 px-5 py-3 bg-[#24304e] hover:bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 shadow-md active:scale-95 cursor-pointer"
                                 >
-                                    <Printer size={16} className="group-hover:rotate-12 transition-transform" />
+                                    <Printer size={14} className="group-hover:rotate-6 transition-transform" />
                                     <span>Print Invoice</span>
                                 </button>
                             </div>

@@ -81,6 +81,15 @@ model DiamondDetail {
   stockItem   StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
 }
 
+model Diamond{
+  id String @id @default(cuid())
+  name String?
+}
+model Stone{
+  id String @id @default(cuid())
+  name String?
+}
+
 // BeadDetail remains the same if it's always a single entry
 model BeadDetail {
   id          String    @id @default(cuid())

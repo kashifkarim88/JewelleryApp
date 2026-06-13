@@ -27,7 +27,7 @@ const SectionWrapper = ({
                 type="button"
             >
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-slate-100 rounded-lg text-slate-600">
+                    <div className="p-2 bg-blue-100 rounded-lg text-slate-600">
                         <Icon size={18} />
                     </div>
                     <span className="font-semibold text-slate-700">{title}</span>
@@ -41,7 +41,7 @@ const SectionWrapper = ({
             </button>
 
             {show && (
-                <div className="p-4 border-t border-slate-100 bg-slate-50/30">
+                <div className="p-4 border-t border-slate-100 bg-slate-100">
                     {children}
                 </div>
             )}

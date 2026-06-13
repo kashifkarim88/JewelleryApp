@@ -9,6 +9,8 @@ interface InputBlockProps {
     type?: string;
     inputRef?: React.RefObject<HTMLInputElement | null>;
     onAction?: () => void;
+    onFocus?: () => void; // 🚩 Added optional onFocus type definition
+    className?: string;
 }
 
 const InputBlock = ({
@@ -18,10 +20,12 @@ const InputBlock = ({
     placeholder,
     type = "text",
     inputRef,
-    onAction
+    onAction,
+    onFocus, // 🚩 Destructured property here
+    className = ""
 }: InputBlockProps) => {
     return (
-        <div className="flex flex-col gap-1.5">
+        <div className={`flex flex-col gap-1.5 ${className}`}>
             <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-0.5 ml-1">
                 {label}
             </label>
@@ -31,6 +35,7 @@ const InputBlock = ({
                     type={type}
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
+                    onFocus={onFocus} // 🚩 Bound natively to the native HTML input element
                     placeholder={placeholder}
                     className={`w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl outline-none transition-all focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-sm text-slate-700 ${onAction ? 'pr-10' : ''}`}
                 />

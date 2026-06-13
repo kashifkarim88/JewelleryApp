@@ -1,7 +1,8 @@
 "use client"
 import React, { useState } from 'react';
-import { Loader2, Search, RefreshCcw, Package } from 'lucide-react';
+import { Loader2, Search, RefreshCcw, Package, Sparkles, X } from 'lucide-react';
 import { useBilling } from '../hooks/useBilling';
+import { useGoldStore } from '../hooks/useGoldStore'; // Adjust path based on your folder structure
 import { FullInput } from './_billing/BillingComponents';
 import { SectionHeader } from './_billing/SectionHeader';
 import { CartItemCard } from './_billing/CartItemCard';
@@ -10,18 +11,92 @@ import { PrintInvoice } from './PrintInvoice';
 
 function InvoicePage() {
     const {
-        customer, setCustomer, goldRate, setGoldRate,
+        customer, setCustomer,
         discount, itemDiscountsSum, extraDiscount, setExtraDiscount,
         exchangeValue, setExchangeValue,
         advance, setAdvance,
-        totalAdvance,
-        itemInput, setItemInput, isFetching, cart, fetchItem,
+        itemInput, setItemInput, isFetching, cart, setCart,
         updateItemDetail, removeItem, calculateItemPrice, calculateAddons,
         finalTotal, clearSession, updateNestedDetail
     } = useBilling();
 
+    // Consume the persistent rate store directly to solve the missing variable errors
+    const { rate21ct, rate24ct, ratePalladium, setRatePalladium } = useGoldStore();
+
     const [editId, setEditId] = useState<string | null>(null);
     const [printData, setPrintData] = useState<{ items: any[], isSingle: boolean } | null>(null);
+
+    // Dialog state handlers for live Palladium interceptions
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [pendingItem, setPendingItem] = useState<any>(null);
+    const [tempRate, setTempRate] = useState('');
+
+    // Local loading override for the custom search fetch sequence
+    const [localFetching, setLocalFetching] = useState(false);
+    const showLoader = isFetching || localFetching;
+
+    // Intercept search submit action to monitor Palladium updates
+    const handleAddProduct = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const query = itemInput.trim().toUpperCase();
+        if (!query) return;
+
+        setLocalFetching(true);
+
+        try {
+            const res = await fetch(`/api/stocks?itemCode=${query}`);
+            const data = await res.json();
+
+            if (res.ok) {
+                // If it is Palladium and there is no active rate saved on disk yet:
+                if (data.metal?.toLowerCase() === 'palladium' && !ratePalladium) {
+                    setPendingItem(data);
+                    setTempRate('');
+                    setIsModalOpen(true);
+                    return;
+                }
+
+                // Standard item injection fallback
+                if (!cart.some(i => i.itemCode === data.itemCode)) {
+                    setCart(prev => [{
+                        ...data,
+                        discount: 0,
+                        advance: 0,
+                        stoneDetails: data.stoneDetails || [],
+                        diamondDetails: data.diamondDetails || []
+                    }, ...prev]);
+                }
+                setItemInput("");
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLocalFetching(false);
+        }
+    };
+
+    const confirmPalladiumRate = () => {
+        if (!tempRate) return;
+
+        // 1. Permanently commit the rate to storage for 24 hours
+        setRatePalladium(tempRate);
+
+        // 2. Add the item that triggered the interception to the active cart
+        if (pendingItem && !cart.some(i => i.itemCode === pendingItem.itemCode)) {
+            setCart(prev => [{
+                ...pendingItem,
+                discount: 0,
+                advance: 0,
+                stoneDetails: pendingItem.stoneDetails || [],
+                diamondDetails: pendingItem.diamondDetails || []
+            }, ...prev]);
+        }
+
+        // 3. Reset state parameters
+        setIsModalOpen(false);
+        setPendingItem(null);
+        setItemInput("");
+    };
 
     const handlePrint = (items: any[], isSingle: boolean) => {
         setPrintData({ items, isSingle });
@@ -41,7 +116,7 @@ function InvoicePage() {
         <>
             <PrintInvoice
                 customer={customer}
-                goldRate={goldRate}
+                goldRate={Number(rate24ct) || 0} // Fallback mapping variable for legacy calculation sheets
                 cart={printData?.items || cart}
                 discount={printData?.isSingle ? 0 : discount}
                 exchangeValue={exchangeValue}
@@ -50,31 +125,39 @@ function InvoicePage() {
             />
 
             <div className="print:hidden min-h-screen bg-[#F8FAFC] p-4 lg:p-8 text-slate-900 antialiased">
-                <div className="max-w-[1600px] mx-auto"> {/* Wider container for better distribution */}
+                <div className="max-w-[1600px] mx-auto">
 
-                    <SectionHeader goldRate={goldRate} setGoldRate={setGoldRate} />
+                    {/* Extracted props: SectionHeader manages internal layout from context hook */}
+                    <SectionHeader />
 
-                    {/* MAIN LAYOUT CONTAINER */}
                     <div className="flex flex-col lg:flex-row gap-6 items-start mt-8">
 
-                        {/* LEFT COLUMN: Takes up the majority of the space (flex-3) */}
+                        {/* LEFT COLUMN: Main panel stream */}
                         <div className="flex-[3] w-full space-y-6">
 
                             {/* Customer & Search Bar */}
-                            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                                <FullInput
-                                    label="Customer Name"
-                                    placeholder="Enter Name"
-                                    value={customer.name}
-                                    onChange={(v) => setCustomer({ ...customer, name: v })}
-                                />
-                                <FullInput
-                                    label="Phone Number"
-                                    placeholder="03xx-xxxxxxx"
-                                    value={customer.phone}
-                                    onChange={(v) => setCustomer({ ...customer, phone: v })}
-                                />
-                                <form onSubmit={fetchItem} className="flex flex-col">
+                            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                                <div className="bg-white grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                                    <FullInput
+                                        label="Customer Name"
+                                        placeholder="Enter Name"
+                                        value={customer.name}
+                                        onChange={(v) => setCustomer({ ...customer, name: v })}
+                                    />
+                                    <FullInput
+                                        label="Phone Number"
+                                        placeholder="03xx-xxxxxxx"
+                                        value={customer.phone}
+                                        onChange={(v) => setCustomer({ ...customer, phone: v })}
+                                    />
+                                    <FullInput
+                                        label="Seller Name"
+                                        placeholder="Seller name"
+                                        value={customer.seller}
+                                        onChange={(v) => setCustomer({ ...customer, seller: v })}
+                                    />
+                                </div>
+                                <form onSubmit={handleAddProduct} className="flex flex-col mt-3">
                                     <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Stock Search</label>
                                     <div className="relative group">
                                         <input
@@ -85,16 +168,16 @@ function InvoicePage() {
                                         />
                                         <button
                                             type="submit"
-                                            disabled={isFetching}
+                                            disabled={showLoader}
                                             className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors"
                                         >
-                                            {isFetching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                                            {showLoader ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
                                         </button>
                                     </div>
                                 </form>
                             </div>
 
-                            {/* Cart List */}
+                            {/* Cart Item Grid Matrix */}
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between px-2">
                                     <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Items In Cart ({cart.length})</h2>
@@ -137,7 +220,7 @@ function InvoicePage() {
                             </div>
                         </div>
 
-                        {/* RIGHT COLUMN: Smaller width for the summary (w-80) */}
+                        {/* RIGHT COLUMN: Summary Actions Panel */}
                         <div className="w-full lg:w-80 sticky top-8 flex-shrink-0">
                             <BillingSummary
                                 cart={cart}
@@ -157,6 +240,56 @@ function InvoicePage() {
                     </div>
                 </div>
             </div>
+
+            {/* INTERACTIVE PALLADIUM VALUE PROMPT DIALOGUE */}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 flex items-center justify-center animate-fade-in p-4">
+                    <div className="bg-white rounded-2xl max-w-sm w-full p-6 border border-slate-100 shadow-2xl relative">
+                        <button
+                            onClick={() => setIsModalOpen(false)}
+                            className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                            <X size={16} />
+                        </button>
+
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="p-2 bg-amber-50 rounded-lg text-amber-700">
+                                <Sparkles size={18} />
+                            </div>
+                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
+                                Rate Required
+                            </h3>
+                        </div>
+
+                        <p className="text-xs text-slate-400 leading-relaxed mb-4">
+                            You just scanned a Palladium item (<span className="font-bold text-slate-700">{pendingItem?.itemCode}</span>). Please specify the active market evaluation per carat below.
+                        </p>
+
+                        <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl flex items-center mb-4">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-4">Rate / Ct</span>
+                            <div className="flex items-center gap-1 border-l pl-4 flex-1">
+                                <span className="text-amber-600 font-bold text-xs">Rs.</span>
+                                <input
+                                    type="number"
+                                    autoFocus
+                                    placeholder="Enter valuation rate"
+                                    value={tempRate}
+                                    onChange={(e) => setTempRate(e.target.value)}
+                                    className="bg-transparent font-bold text-slate-800 outline-none w-full text-sm"
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={confirmPalladiumRate}
+                            disabled={!tempRate}
+                            className="w-full py-2.5 bg-slate-900 disabled:bg-slate-200 text-white rounded-xl text-xs font-bold tracking-widest uppercase shadow-lg shadow-slate-900/10 transition-all hover:bg-slate-800"
+                        >
+                            Confirm & Add To Cart
+                        </button>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

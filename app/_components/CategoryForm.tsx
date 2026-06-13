@@ -2,12 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { Tag, Plus, Hash, Type, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
-// --- 1. Define Props Interface for TypeScript Build Safety ---
+// --- Props Interface for TypeScript Build Safety ---
 interface CategoryFormProps {
-    onSuccess?: () => void;
+    onCategoryCreated?: () => void;
 }
 
-export default function CategoryForm({ onSuccess }: CategoryFormProps) {
+export default function CategoryForm({ onCategoryCreated }: CategoryFormProps) {
     const [productname, setProductName] = useState("");
     const [productAbbreviation, setProductAbbreviation] = useState("");
     const [productCode, setProductCode] = useState("");
@@ -52,7 +52,7 @@ export default function CategoryForm({ onSuccess }: CategoryFormProps) {
         return () => clearTimeout(timer);
     }, [productAbbreviation]);
 
-    // --- 2. Form Submission with Callback ---
+    // ---Form Submission with Callback ---
     const handleSubmit = async () => {
         if (isAbbrTaken || !productname || !productAbbreviation || !productCode) return;
 
@@ -78,9 +78,9 @@ export default function CategoryForm({ onSuccess }: CategoryFormProps) {
             } else {
                 setSuccess(true);
 
-                // --- 3. TRIGGER AUTO-REFRESH IN STOCK PAGE ---
-                if (onSuccess) {
-                    onSuccess();
+                // --- TRIGGER AUTO-REFRESH IN STOCK PAGE ---
+                if (onCategoryCreated) {
+                    onCategoryCreated(); // This trigger the parent StockPage to refresh categories after a successful creation
                 }
 
                 // Reset form fields

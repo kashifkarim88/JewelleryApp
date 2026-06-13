@@ -1,4 +1,6 @@
+"use client"
 import { useState, useEffect, useMemo } from 'react';
+import { useGoldStore } from './useGoldStore';
 
 export interface DetailSection {
     id?: string;
@@ -31,6 +33,9 @@ export interface CartItem {
 }
 
 export const useBilling = () => {
+    // Connect to global store for synchronized 21ct and 24ct live rates
+    const { rate21ct, rate24ct, ratePalladium, setRatePalladium } = useGoldStore();
+
     const getSaved = (key: string, fallback: any) => {
         if (typeof window === "undefined") return fallback;
         const saved = sessionStorage.getItem(key);
@@ -41,8 +46,9 @@ export const useBilling = () => {
         }
     };
 
+
     // Customer & Main States
-    const [customer, setCustomer] = useState(() => getSaved('bill_customer', { name: '', phone: '' }));
+    const [customer, setCustomer] = useState(() => getSaved('bill_customer', { name: '', phone: '', seller: "" }));
     const [exchangeValue, setExchangeValue] = useState<number>(() => getSaved('bill_exchangeValue', 0));
     const [cart, setCart] = useState<CartItem[]>(() => getSaved('bill_cart', []));
     const [extraDiscount, setExtraDiscount] = useState<number>(() => getSaved('bill_extraDiscount', 0));
@@ -50,16 +56,16 @@ export const useBilling = () => {
     const [itemInput, setItemInput] = useState("");
     const [isFetching, setIsFetching] = useState(false);
 
-    // Metal Rates States
-    const [goldRate, setGoldRate] = useState<number>(() => getSaved('bill_goldRate', 0));
+    // Remaining Metal Rates States (Gold removed here as it is managed by Zustand)
     const [silverRate, setSilverRate] = useState<number>(() => getSaved('bill_silverRate', 0));
     const [platinumRate, setPlatinumRate] = useState<number>(() => getSaved('bill_platinumRate', 0));
     const [palladiumRate, setPalladiumRate] = useState<number>(() => getSaved('bill_palladiumRate', 0));
 
+
+
     // Session Persistence
     useEffect(() => {
         sessionStorage.setItem('bill_customer', JSON.stringify(customer));
-        sessionStorage.setItem('bill_goldRate', JSON.stringify(goldRate));
         sessionStorage.setItem('bill_silverRate', JSON.stringify(silverRate));
         sessionStorage.setItem('bill_platinumRate', JSON.stringify(platinumRate));
         sessionStorage.setItem('bill_palladiumRate', JSON.stringify(palladiumRate));
@@ -67,7 +73,7 @@ export const useBilling = () => {
         sessionStorage.setItem('bill_cart', JSON.stringify(cart));
         sessionStorage.setItem('bill_extraDiscount', JSON.stringify(extraDiscount));
         sessionStorage.setItem('bill_advance', JSON.stringify(advance));
-    }, [customer, goldRate, silverRate, platinumRate, palladiumRate, exchangeValue, cart, extraDiscount, advance]);
+    }, [customer, silverRate, platinumRate, palladiumRate, exchangeValue, cart, extraDiscount, advance]);
 
     // Totals logic
     const itemDiscountsSum = useMemo(() =>
@@ -86,18 +92,32 @@ export const useBilling = () => {
     };
 
     const calculateItemBasePrice = (item: CartItem) => {
-        // Select rate based on the metal type from API
         let activeRate = 0;
+        let isPerGram = true;
         const metalType = item.metal?.toLowerCase();
+        const caratValue = item.carat?.toLowerCase() || '';
 
-        switch (metalType) {
-            case 'silver': activeRate = silverRate; break;
-            case 'platinum': activeRate = platinumRate; break;
-            case 'palladium': activeRate = palladiumRate; break;
-            default: activeRate = goldRate; // Defaults to Gold for everything else
+        // Prioritize explicit alternative metals first
+        if (metalType === 'silver') {
+            activeRate = silverRate;
+        } else if (metalType === 'platinum') {
+            activeRate = platinumRate;
+        } else if (metalType === 'palladium') {
+            activeRate = palladiumRate;
+            isPerGram = false;
+        } else {
+            // Defaulting behavior strictly matches based on carat signatures
+            if (caratValue.includes('24')) {
+                activeRate = Number(rate24ct) || 0;
+            } else if (caratValue.includes('21')) {
+                activeRate = Number(rate21ct) || 0;
+            } else {
+                // Safe fallback if an item does not specify 21 or 24 clearly
+                activeRate = Number(rate24ct) || 0;
+            }
         }
 
-        const ratePerGram = (activeRate || 0) / 11.664;
+        const ratePerGram = isPerGram ? (activeRate / 11.664) : activeRate;
         const totalWeight = Number(item.netWeight || 0) + (Number(item.wastagePercent || 0) * Number(item.netWeight || 0) / 100);
 
         return (totalWeight * ratePerGram) + (Number(item.making) || 0) + calculateAddons(item);
@@ -105,7 +125,8 @@ export const useBilling = () => {
 
     const subTotal = useMemo(() =>
         cart.reduce((a, b) => a + calculateItemBasePrice(b), 0)
-        , [cart, goldRate, silverRate, platinumRate, palladiumRate]);
+        // Explicitly tracking Zustand rates ensures the subtotal updates instantly on shift changes
+        , [cart, silverRate, platinumRate, palladiumRate, rate21ct, rate24ct]);
 
     const finalTotal = subTotal - itemDiscountsSum - extraDiscount - exchangeValue - itemAdvancesSum - advance;
 
@@ -181,7 +202,6 @@ export const useBilling = () => {
 
     return {
         customer, setCustomer,
-        goldRate, setGoldRate,
         silverRate, setSilverRate,
         platinumRate, setPlatinumRate,
         palladiumRate, setPalladiumRate,
