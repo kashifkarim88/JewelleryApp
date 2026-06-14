@@ -9,6 +9,9 @@ interface SectionWrapperProps {
     setShow: (show: boolean) => void;
     isDirty?: boolean;
     children: React.ReactNode;
+    headerBg?: string;    // Custom background class for the header
+    iconBg?: string;      // Custom background class for the icon container
+    iconColor?: string;   // Custom text/stroke color class for the icon
 }
 
 const SectionWrapper = ({
@@ -17,31 +20,41 @@ const SectionWrapper = ({
     show,
     setShow,
     isDirty,
-    children
+    children,
+    headerBg = 'bg-white hover:bg-slate-50', // Clean default fallback
+    iconBg = 'bg-slate-100',
+    iconColor = 'text-slate-600'
 }: SectionWrapperProps) => {
     return (
-        <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm transition-all duration-200">
+        <div className="border border-slate-200 rounded-2xl bg-white shadow-sm overflow-hidden transition-all duration-200">
             <button
                 onClick={() => setShow(!show)}
-                className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                className={`w-full flex items-center justify-between p-4 transition-colors ${headerBg}`}
                 type="button"
             >
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg text-slate-600">
+                    {/* The dynamic gemstone-themed icon container */}
+
+                    <div className={`p-2 rounded-xl transition-colors ${iconBg} ${iconColor}`}>
                         <Icon size={18} />
                     </div>
-                    <span className="font-semibold text-slate-700">{title}</span>
+
+                    <span className="font-bold text-slate-800 tracking-wide text-[14px]">
+                        {title}
+                    </span>
+
+                    {/* Synchronized indicator dot if section is dirty */}
                     {isDirty && (
-                        <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" title="Unsaved changes" />
+                        <span className={`h-2 w-2 rounded-full animate-pulse ${iconColor}`} title="Unsaved changes" />
                     )}
                 </div>
-                <div className="text-slate-400">
-                    {show ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                <div className="text-slate-400 mr-1">
+                    {show ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
             </button>
 
             {show && (
-                <div className="p-4 border-t border-slate-100 bg-slate-100">
+                <div className="p-5 border-t border-slate-100/80 bg-white">
                     {children}
                 </div>
             )}
