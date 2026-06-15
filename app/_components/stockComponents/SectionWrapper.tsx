@@ -26,7 +26,7 @@ const SectionWrapper = ({
     iconColor = 'text-slate-600'
 }: SectionWrapperProps) => {
     return (
-        <div className="border border-slate-200 rounded-2xl bg-white shadow-sm overflow-hidden transition-all duration-200">
+        <div className="border border-slate-200 rounded-2xl bg-white shadow-sm transition-all duration-200">
             <button
                 onClick={() => setShow(!show)}
                 className={`w-full flex items-center justify-between p-4 transition-colors ${headerBg}`}
