@@ -1,172 +1,166 @@
-"use client"
-import React, { useEffect, useState, useRef } from 'react';
+"use client";
+
+import React, { useEffect, useState } from 'react';
 import { useGoldStore } from '@/app/hooks/useGoldStore';
-import { Gem, Coins, ShieldCheck, Edit2 } from 'lucide-react';
+import { Edit2, LucideIcon, Sparkles, Shield, Disc, Loader2 } from 'lucide-react';
+
+interface MetalItem {
+    id: string;
+    shortLabel: string;
+    icon: LucideIcon;
+    isPremium: boolean;
+    getGlobalRate: (store: any) => string;
+    setGlobalRate: (store: any, val: string) => Promise<void> | void;
+}
+
+const METALS_CONFIG: MetalItem[] = [
+    { id: '24ct', shortLabel: '24K', icon: Sparkles, isPremium: true, getGlobalRate: (s) => s.rate24ct, setGlobalRate: async (s, v) => await s.setRate24ct(v) },
+    { id: '22ct', shortLabel: '22K', icon: Disc, isPremium: false, getGlobalRate: (s) => s.rate22ct, setGlobalRate: async (s, v) => await s.setRate22ct(v) },
+    { id: '21ct', shortLabel: '21K', icon: Disc, isPremium: false, getGlobalRate: (s) => s.rate21ct, setGlobalRate: async (s, v) => await s.setRate21ct(v) },
+    { id: '20ct', shortLabel: '20K', icon: Disc, isPremium: false, getGlobalRate: (s) => s.rate20ct, setGlobalRate: async (s, v) => await s.setRate20ct(v) },
+    { id: '18ct', shortLabel: '18K', icon: Disc, isPremium: false, getGlobalRate: (s) => s.rate18ct, setGlobalRate: async (s, v) => await s.setRate18ct(v) },
+    { id: '14ct', shortLabel: '14K', icon: Disc, isPremium: false, getGlobalRate: (s) => s.rate14ct, setGlobalRate: async (s, v) => await s.setRate14ct(v) },
+    { id: 'palladium', shortLabel: 'PL', icon: Shield, isPremium: false, getGlobalRate: (s) => s.ratePalladium, setGlobalRate: async (s, v) => await s.setRatePalladium(v) },
+];
 
 export const SectionHeader = () => {
-    // Pull the active states and sync mutators directly from Zustand
-    const { rate21ct, rate24ct, ratePalladium, setRate21ct, setRate24ct, setRatePalladium } = useGoldStore();
-
-    // Prevent Next.js hydration mismatch anomalies
+    const store = useGoldStore();
     const [isMounted, setIsMounted] = useState(false);
-
-    // Tracks which field is active: '24ct' | '21ct' | 'palladium' | null
     const [activeEdit, setActiveEdit] = useState<string | null>(null);
-
-    // Dynamic local input buffer states
-    const [val24, setVal24] = useState('');
-    const [val21, setVal21] = useState('');
-    const [valPl, setValPl] = useState('');
+    const [localValues, setLocalValues] = useState<Record<string, string>>({});
+    const [syncingStates, setSyncingStates] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         setIsMounted(true);
-        if (rate24ct) setVal24(rate24ct);
-        if (rate21ct) setVal21(rate21ct);
-        if (ratePalladium) setValPl(ratePalladium);
-    }, [rate24ct, rate21ct, ratePalladium]);
+        const freshValues: Record<string, string> = {};
+        METALS_CONFIG.forEach(metal => {
+            freshValues[metal.id] = metal.getGlobalRate(store) || '';
+        });
+        setLocalValues(freshValues);
+    }, [
+        store.rate24ct, store.rate22ct, store.rate21ct,
+        store.rate20ct, store.rate18ct, store.rate14ct, store.ratePalladium
+    ]);
 
     if (!isMounted) return null;
 
-    // Save and close helpers
-    const handleBlur = (field: string) => {
-        if (field === '24ct') setRate24ct(val24);
-        if (field === '21ct') setRate21ct(val21);
-        if (field === 'palladium') setRatePalladium(valPl);
+    const handleCommitChange = async (metal: MetalItem) => {
+        const rawValue = localValues[metal.id];
+        const lastValidValue = metal.getGlobalRate(store) || '';
+
+        const parsedValue = parseFloat(rawValue);
+        if (isNaN(parsedValue) || parsedValue <= 0) {
+            setLocalValues(prev => ({ ...prev, [metal.id]: lastValidValue }));
+            setActiveEdit(null);
+            return;
+        }
+
+        if (parsedValue === parseFloat(lastValidValue)) {
+            setActiveEdit(null);
+            return;
+        }
+
+        const cleanStringValue = parsedValue.toString();
         setActiveEdit(null);
+        setSyncingStates(prev => ({ ...prev, [metal.id]: true }));
+
+        try {
+            await metal.setGlobalRate(store, cleanStringValue);
+        } catch (error) {
+            console.error(`Production Error Syncing ${metal.id}:`, error);
+            alert(`Failed to save updated price for ${metal.shortLabel}. Reverting to previous rate.`);
+            setLocalValues(prev => ({ ...prev, [metal.id]: lastValidValue }));
+        } finally {
+            setSyncingStates(prev => ({ ...prev, [metal.id]: false }));
+        }
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent, field: string) => {
-        if (e.key === 'Enter') handleBlur(field);
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, metal: MetalItem) => {
+        if (e.key === 'Enter') {
+            (e.currentTarget as HTMLElement).blur();
+        }
         if (e.key === 'Escape') {
-            // Revert changes on escape trigger
-            setVal24(rate24ct || '');
-            setVal21(rate21ct || '');
-            setValPl(ratePalladium || '');
+            setLocalValues(prev => ({ ...prev, [metal.id]: metal.getGlobalRate(store) || '' }));
             setActiveEdit(null);
         }
     };
 
     return (
-        <header className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5 select-none">
+        <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4 select-none">
             {/* BRANDING SECTION */}
             <div>
-                <h1 className="text-2xl font-black text-slate-800 tracking-tight">
+                <h1 className="text-xl font-black text-slate-800 tracking-tight">
                     Billing Dashboard
                 </h1>
-                <p className="text-slate-400 text-[9px] font-bold uppercase tracking-[0.2em] mt-1 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                <p className="text-slate-400 text-[9px] font-bold uppercase tracking-[0.15em] mt-0.5 flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-amber-500" />
                     Hamidullah Jewellery
                 </p>
             </div>
 
-            {/* DYNAMIC LIVE MARKET BADGES CONTAINER */}
-            <div className="flex flex-wrap items-center gap-3">
+            {/* COMPACT DASHBOARD STATUS GRID */}
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 max-w-4xl">
+                {METALS_CONFIG.map((metal) => {
+                    const globalRate = metal.getGlobalRate(store);
 
-                {/* 24ct Rate Badge */}
-                {rate24ct && (
-                    <div
-                        onClick={() => setActiveEdit('24ct')}
-                        className="bg-slate-900 border border-slate-950 px-4 py-2 rounded-xl flex items-center shadow-sm cursor-pointer hover:border-amber-500/50 transition-all group"
-                    >
-                        <div className="flex flex-col mr-4">
-                            <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest leading-none">
-                                24ct Pure Gold
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 border-l border-slate-800 pl-4 min-w-[90px]">
-                            <Gem size={11} className="text-amber-500" />
-                            <span className="text-white font-black text-xs tracking-tight mr-1">Rs.</span>
-                            {activeEdit === '24ct' ? (
-                                <input
-                                    type="number"
-                                    autoFocus
-                                    className="bg-transparent font-black text-white text-xs tracking-tight outline-none w-16 border-b border-dashed border-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                    value={val24}
-                                    onChange={(e) => setVal24(e.target.value)}
-                                    onBlur={() => handleBlur('24ct')}
-                                    onKeyDown={(e) => handleKeyDown(e, '24ct')}
-                                    onClick={(e) => e.stopPropagation()}
-                                />
-                            ) : (
-                                <span className="font-black text-white text-xs tracking-tight flex items-center gap-1">
-                                    {Number(rate24ct).toLocaleString()}
-                                    <Edit2 size={10} className="text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity ml-1" />
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                )}
+                    // FIXED: Changed number comparison '0' to string comparison '0' or "0"
+                    if (!globalRate && globalRate !== '0') return null;
 
-                {/* 21ct Rate Badge */}
-                {rate21ct && (
-                    <div
-                        onClick={() => setActiveEdit('21ct')}
-                        className="bg-white border border-slate-200 px-4 py-2 rounded-xl flex items-center shadow-sm cursor-pointer hover:border-indigo-500/50 transition-all group"
-                    >
-                        <div className="flex flex-col mr-4">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">
-                                21ct Gold Rate
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 border-l border-slate-100 pl-4 min-w-[90px]">
-                            <Coins size={11} className="text-amber-600" />
-                            <span className="text-slate-800 font-black text-xs tracking-tight mr-1">Rs.</span>
-                            {activeEdit === '21ct' ? (
-                                <input
-                                    type="number"
-                                    autoFocus
-                                    className="bg-transparent font-black text-slate-800 text-xs tracking-tight outline-none w-16 border-b border-dashed border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                    value={val21}
-                                    onChange={(e) => setVal21(e.target.value)}
-                                    onBlur={() => handleBlur('21ct')}
-                                    onKeyDown={(e) => handleKeyDown(e, '21ct')}
-                                    onClick={(e) => e.stopPropagation()}
-                                />
-                            ) : (
-                                <span className="font-black text-slate-800 text-xs tracking-tight flex items-center gap-1">
-                                    {Number(rate21ct).toLocaleString()}
-                                    <Edit2 size={10} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity ml-1" />
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                )}
+                    const Icon = metal.icon;
+                    const isEditing = activeEdit === metal.id;
+                    const isSyncing = syncingStates[metal.id];
 
-                {/* Palladium Rate Badge */}
-                {ratePalladium && (
-                    <div
-                        onClick={() => setActiveEdit('palladium')}
-                        className="bg-slate-50 border border-slate-200 px-4 py-2 rounded-xl flex items-center shadow-sm cursor-pointer hover:border-slate-400 transition-all group"
-                    >
-                        <div className="flex flex-col mr-4">
-                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-none">
-                                Palladium / Ct
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 border-l border-slate-200 pl-4 min-w-[90px]">
-                            <ShieldCheck size={11} className="text-slate-400" />
-                            <span className="text-slate-700 font-black text-xs tracking-tight mr-1">Rs.</span>
-                            {activeEdit === 'palladium' ? (
-                                <input
-                                    type="number"
-                                    autoFocus
-                                    className="bg-transparent font-black text-slate-700 text-xs tracking-tight outline-none w-16 border-b border-dashed border-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                    value={valPl}
-                                    onChange={(e) => setValPl(e.target.value)}
-                                    onBlur={() => handleBlur('palladium')}
-                                    onKeyDown={(e) => handleKeyDown(e, 'palladium')}
-                                    onClick={(e) => e.stopPropagation()}
-                                />
-                            ) : (
-                                <span className="font-black text-slate-700 text-xs tracking-tight flex items-center gap-1">
-                                    {Number(ratePalladium).toLocaleString()}
-                                    <Edit2 size={10} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity ml-1" />
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                )}
+                    return (
+                        <div
+                            key={metal.id}
+                            onClick={() => !isSyncing && setActiveEdit(metal.id)}
+                            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all group ${isSyncing ? 'opacity-50 pointer-events-none cursor-not-allowed ' : 'cursor-pointer '
+                                }${metal.isPremium
+                                    ? 'bg-slate-900 border-slate-950 text-white hover:bg-slate-800'
+                                    : 'bg-slate-50 border-slate-200/60 text-slate-700 hover:bg-slate-100'
+                                }`}
+                        >
+                            {/* Shortened Label Block */}
+                            <div className="flex items-center gap-1 font-bold text-[10px] tracking-wider uppercase opacity-80">
+                                {isSyncing ? (
+                                    <Loader2 size={10} className="animate-spin text-amber-500" />
+                                ) : (
+                                    <Icon size={10} className={metal.isPremium ? 'text-amber-400' : 'text-slate-400'} />
+                                )}
+                                <span>{metal.shortLabel}</span>
+                            </div>
 
+                            <span className="opacity-30 font-light">|</span>
+
+                            {/* Safe Input Content Frame */}
+                            <div className="flex items-center gap-0.5 font-bold min-w-[55px]">
+                                <span className="text-[10px] opacity-70 mr-0.5">Rs.</span>
+                                {isEditing ? (
+                                    <input
+                                        type="number"
+                                        autoFocus
+                                        min="1"
+                                        step="any"
+                                        className={`bg-transparent font-bold text-xs outline-none w-14 border-b border-dashed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${metal.isPremium ? 'text-white border-amber-400' : 'text-slate-800 border-slate-500'
+                                            }`}
+                                        value={localValues[metal.id] ?? ''}
+                                        onChange={(e) => setLocalValues(prev => ({ ...prev, [metal.id]: e.target.value }))}
+                                        onBlur={() => handleCommitChange(metal)}
+                                        onKeyDown={(e) => handleKeyDown(e, metal)}
+                                        onClick={(e) => e.stopPropagation()}
+                                    />
+                                ) : (
+                                    <span className="flex items-center gap-1">
+                                        {Number(globalRate).toLocaleString()}
+                                        {!isSyncing && (
+                                            <Edit2 size={9} className="opacity-0 group-hover:opacity-40 transition-opacity" />
+                                        )}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
         </header>
     );

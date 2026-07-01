@@ -34,7 +34,10 @@ export default function IndexPage() {
                         <span>{rate24ct}</span>
                     </div>
                     <div className="flex flex-row gap-3">
-                        <div className="relative group">
+                        <div className="relative group flex flex-col gap-1.5">
+                            <span className="text-[9px] font-extrabold uppercase tracking-[0.15em] text-amber-800 bg-amber-50 border border-amber-200/40 rounded-md px-1.5 py-0.5 w-fit shadow-2xs">
+                                21ct Gold
+                            </span>
                             <input
                                 type="number"
                                 placeholder="21ct Rate"
@@ -43,7 +46,10 @@ export default function IndexPage() {
                                 className="bg-white/80 backdrop-blur-md border border-slate-200/60 shadow-sm px-4 py-2 rounded-xl text-xs font-medium focus:border-amber-500/50 focus:bg-white outline-none transition-all w-28 md:w-36 text-slate-700 placeholder-slate-400"
                             />
                         </div>
-                        <div className="relative group">
+                        <div className="relative group flex flex-col gap-1.5">
+                            <span className="text-[9px] font-extrabold uppercase tracking-[0.15em] text-amber-800 bg-amber-50 border border-amber-200/40 rounded-md px-1.5 py-0.5 w-fit shadow-2xs">
+                                24ct Gold
+                            </span>
                             <input
                                 type="number"
                                 placeholder="24ct Rate"
