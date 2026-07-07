@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { useGoldStore } from '../hooks/useGoldStore';
 
+// Assuming these interfaces come from your global types file
 interface ClientProfile {
     name: string;
     phone: string;
@@ -13,28 +14,43 @@ interface DetailItem {
     weight?: string | number;
 }
 
-interface CartItem {
-    id: string | number;
-    carat?: string;
-    metal?: string;
-    categoryName?: string;
-    itemCode?: string;
-    imageUrl?: string;
-    itemTotal?: string | number;
+// 1. This matches your updated global CartItem interface
+export interface CartItem {
+    id: string;
+    itemCode: string;
+    productCode?: string;
+    categoryName: string;
+    carat: string;
+    metal: string;
+    netWeight: number;
+    wastagePercent: number;
+    making: number;
+    discount?: number;
+    advance?: number;
+    diamondDetails?: DetailItem[] | null;
+    stoneDetails?: DetailItem[] | null;
+    beadDetails?: DetailItem | DetailItem[] | null; // Kept flexible for handling array or single object safely
+    peritemTotal?: number;
+    itemTotal?: string | number; // Fallback helper if accessed via raw string calculations
     stonesTotal?: string | number;
     stonePrice?: string | number;
-    netWeight?: string | number;
     wastageGram?: string | number;
-    wastagePercent?: string | number;
-    making?: string | number;
-    diamondDetails?: DetailItem[];
-    stoneDetails?: DetailItem[];
-    beadDetails?: DetailItem | DetailItem[];
+    imageUrl?: string;
+}
+
+// 2. Create an Enriched interface containing your runtime computed values
+interface ProcessedCartItem extends CartItem {
+    netW: number;
+    wasteW: number;
+    grossMetalWeight: number;
+    stonePrice: number;
+    absoluteMetalPrice: number;
+    structuralAccentsWeight: number;
 }
 
 interface PrintInvoiceProps {
     customer: ClientProfile;
-    cart: CartItem[];
+    cart: CartItem[]; // Receives standard application CartItem objects
     discount: number;
     exchangeValue: number;
     advance: number;
@@ -55,7 +71,6 @@ export const PrintInvoice = ({
         ratePalladium, rateSilver, ratePlatinum
     } = useGoldStore();
 
-    // 1. Build a unified, memoized local currency rate lookup index
     const rateLookup = useMemo((): Record<string, number> => ({
         '24k': Number(rate24ct) || 0, '24ct': Number(rate24ct) || 0,
         '22k': Number(rate22ct) || 0, '22ct': Number(rate22ct) || 0,
@@ -68,7 +83,6 @@ export const PrintInvoice = ({
         'platinum': Number(ratePlatinum) || 0
     }), [rate21ct, rate24ct, rate22ct, rate20ct, rate18ct, rate14ct, ratePalladium, rateSilver, ratePlatinum]);
 
-    // 2. Optimized, stable method to extract standard live market metal rates
     const getItemRate = (item: CartItem): number => {
         const caratKey = item.carat ? String(item.carat).toLowerCase().trim() : '';
         const metalKey = item.metal ? String(item.metal).toLowerCase().trim() : '';
@@ -91,8 +105,7 @@ export const PrintInvoice = ({
         return rateLookup[metalKey] || 0;
     };
 
-    // 3. Centralized deep calculation extractor for decorative accents (Diamonds, Stones, Beads)
-    const sumDetailsWeight = (details: DetailItem | DetailItem[] | undefined): number => {
+    const sumDetailsWeight = (details: DetailItem | DetailItem[] | undefined | null): number => {
         if (!details) return 0;
         if (Array.isArray(details)) {
             return details.reduce((acc, current) => acc + (Number(current?.weight) || 0), 0);
@@ -100,9 +113,8 @@ export const PrintInvoice = ({
         return Number((details as DetailItem).weight) || 0;
     };
 
-    // 4. Memoized calculation of total invoice entries and layout matrices
     const primaryInvoiceSubTotal = useMemo(() => {
-        return cart.reduce((sum, item) => sum + (Number(item.itemTotal) || 0), 0);
+        return cart.reduce((sum, item) => sum + (Number(item.peritemTotal || item.itemTotal) || 0), 0);
     }, [cart]);
 
     const uniqueRatesToShow = useMemo(() => {
@@ -111,8 +123,8 @@ export const PrintInvoice = ({
         );
     }, [cart]);
 
-    // 5. Build enriched structure containing clean parsed numbers for the template loop
-    const processedCartItems = useMemo(() => {
+    // Explicitly typed to yield ProcessedCartItem array
+    const processedCartItems = useMemo((): ProcessedCartItem[] => {
         return cart.map((item) => {
             const netW = Number(item.netWeight) || 0;
             const wasteW = item.wastageGram
@@ -121,9 +133,8 @@ export const PrintInvoice = ({
 
             const grossMetalWeight = netW + wasteW;
             const stonePrice = Number(item.stonesTotal || item.stonePrice) || 0;
-            const absoluteMetalPrice = (Number(item.itemTotal) || 0) - stonePrice;
+            const absoluteMetalPrice = (Number(item.peritemTotal || item.itemTotal) || 0) - stonePrice;
 
-            // Compute total weight across all micro-structures cleanly
             const structuralAccentsWeight =
                 sumDetailsWeight(item.diamondDetails) +
                 sumDetailsWeight(item.stoneDetails) +
@@ -141,9 +152,9 @@ export const PrintInvoice = ({
         });
     }, [cart]);
 
-    // Paginate data elements cleanly for print layout views (2 items per page)
-    const cartPages = useMemo(() => {
-        const chunks = [];
+    // Explicitly typed to yield arrays of ProcessedCartItem chunks
+    const cartPages = useMemo((): ProcessedCartItem[][] => {
+        const chunks: ProcessedCartItem[][] = [];
         for (let i = 0; i < processedCartItems.length; i += 2) {
             chunks.push(processedCartItems.slice(i, i + 2));
         }
@@ -370,7 +381,7 @@ export const PrintInvoice = ({
                                                                     <div className="flex font-bold w-full text-zinc-950">
                                                                         <div className="py-1.5 px-3 flex-1 text-right ">Item Sub Total (Rs)</div>
                                                                         <div className="py-1.5 px-2 text-right w-28 text-[12px] font-extrabold">
-                                                                            {formatCurrency(Number(item.itemTotal))}
+                                                                            {formatCurrency(Number(item.peritemTotal || item.itemTotal))}
                                                                         </div>
                                                                     </div>
                                                                 </div>
