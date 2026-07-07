@@ -1,10 +1,40 @@
-"use client"
-import React, { useEffect } from 'react';
+"use client";
+
+import React, { useEffect, useMemo } from 'react';
 import { useGoldStore } from '../hooks/useGoldStore';
 
+interface ClientProfile {
+    name: string;
+    phone: string;
+    seller?: string;
+}
+
+interface DetailItem {
+    weight?: string | number;
+}
+
+interface CartItem {
+    id: string | number;
+    carat?: string;
+    metal?: string;
+    categoryName?: string;
+    itemCode?: string;
+    imageUrl?: string;
+    itemTotal?: string | number;
+    stonesTotal?: string | number;
+    stonePrice?: string | number;
+    netWeight?: string | number;
+    wastageGram?: string | number;
+    wastagePercent?: string | number;
+    making?: string | number;
+    diamondDetails?: DetailItem[];
+    stoneDetails?: DetailItem[];
+    beadDetails?: DetailItem | DetailItem[];
+}
+
 interface PrintInvoiceProps {
-    customer: { name: string; phone: string; seller?: string };
-    cart: any[];
+    customer: ClientProfile;
+    cart: CartItem[];
     discount: number;
     exchangeValue: number;
     advance: number;
@@ -25,8 +55,8 @@ export const PrintInvoice = ({
         ratePalladium, rateSilver, ratePlatinum
     } = useGoldStore();
 
-    // Global rates registry for unified data querying
-    const rateLookup: Record<string, number> = {
+    // 1. Build a unified, memoized local currency rate lookup index
+    const rateLookup = useMemo((): Record<string, number> => ({
         '24k': Number(rate24ct) || 0, '24ct': Number(rate24ct) || 0,
         '22k': Number(rate22ct) || 0, '22ct': Number(rate22ct) || 0,
         '21k': Number(rate21ct) || 0, '21ct': Number(rate21ct) || 0,
@@ -36,16 +66,18 @@ export const PrintInvoice = ({
         'palladium': Number(ratePalladium) || 0,
         'silver': Number(rateSilver) || 0,
         'platinum': Number(ratePlatinum) || 0
-    };
+    }), [rate21ct, rate24ct, rate22ct, rate20ct, rate18ct, rate14ct, ratePalladium, rateSilver, ratePlatinum]);
 
-    // Case-insensitive, robust rate resolver
-    const getItemRate = (item: any): number => {
+    // 2. Optimized, stable method to extract standard live market metal rates
+    const getItemRate = (item: CartItem): number => {
         const caratKey = item.carat ? String(item.carat).toLowerCase().trim() : '';
         const metalKey = item.metal ? String(item.metal).toLowerCase().trim() : '';
 
-        if (metalKey === 'palladium' || caratKey === 'palladium') return Number(ratePalladium) || 0;
-        if (metalKey === 'silver' || caratKey === 'silver') return Number(rateSilver) || 0;
-        if (metalKey === 'platinum' || caratKey === 'platinum') return Number(ratePlatinum) || 0;
+        if (['palladium', 'silver', 'platinum'].includes(metalKey) || ['palladium', 'silver', 'platinum'].includes(caratKey)) {
+            if (metalKey === 'palladium' || caratKey === 'palladium') return Number(ratePalladium) || 0;
+            if (metalKey === 'silver' || caratKey === 'silver') return Number(rateSilver) || 0;
+            if (metalKey === 'platinum' || caratKey === 'platinum') return Number(ratePlatinum) || 0;
+        }
 
         if (rateLookup[caratKey]) return rateLookup[caratKey];
 
@@ -59,6 +91,65 @@ export const PrintInvoice = ({
         return rateLookup[metalKey] || 0;
     };
 
+    // 3. Centralized deep calculation extractor for decorative accents (Diamonds, Stones, Beads)
+    const sumDetailsWeight = (details: DetailItem | DetailItem[] | undefined): number => {
+        if (!details) return 0;
+        if (Array.isArray(details)) {
+            return details.reduce((acc, current) => acc + (Number(current?.weight) || 0), 0);
+        }
+        return Number((details as DetailItem).weight) || 0;
+    };
+
+    // 4. Memoized calculation of total invoice entries and layout matrices
+    const primaryInvoiceSubTotal = useMemo(() => {
+        return cart.reduce((sum, item) => sum + (Number(item.itemTotal) || 0), 0);
+    }, [cart]);
+
+    const uniqueRatesToShow = useMemo(() => {
+        return cart.filter((item, index, self) =>
+            index === self.findIndex((t) => (t.carat || t.metal) === (item.carat || item.metal))
+        );
+    }, [cart]);
+
+    // 5. Build enriched structure containing clean parsed numbers for the template loop
+    const processedCartItems = useMemo(() => {
+        return cart.map((item) => {
+            const netW = Number(item.netWeight) || 0;
+            const wasteW = item.wastageGram
+                ? Number(item.wastageGram)
+                : (netW * (Number(item.wastagePercent) || 0)) / 100;
+
+            const grossMetalWeight = netW + wasteW;
+            const stonePrice = Number(item.stonesTotal || item.stonePrice) || 0;
+            const absoluteMetalPrice = (Number(item.itemTotal) || 0) - stonePrice;
+
+            // Compute total weight across all micro-structures cleanly
+            const structuralAccentsWeight =
+                sumDetailsWeight(item.diamondDetails) +
+                sumDetailsWeight(item.stoneDetails) +
+                sumDetailsWeight(item.beadDetails);
+
+            return {
+                ...item,
+                netW,
+                wasteW,
+                grossMetalWeight,
+                stonePrice,
+                absoluteMetalPrice,
+                structuralAccentsWeight,
+            };
+        });
+    }, [cart]);
+
+    // Paginate data elements cleanly for print layout views (2 items per page)
+    const cartPages = useMemo(() => {
+        const chunks = [];
+        for (let i = 0; i < processedCartItems.length; i += 2) {
+            chunks.push(processedCartItems.slice(i, i + 2));
+        }
+        return chunks;
+    }, [processedCartItems]);
+
     useEffect(() => {
         console.log("=================== PRINT INVOICE INCOMING DATA DETECTOR ===================");
         console.log("Customer Profile Metadata object:", customer);
@@ -70,12 +161,14 @@ export const PrintInvoice = ({
         console.log("============================================================================");
     }, [customer, cart, discount, exchangeValue, advance, finalTotal]);
 
-    const formattedDate = new Date().toLocaleDateString('en-GB', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-    });
+    const formattedDate = useMemo(() => {
+        return new Date().toLocaleDateString('en-GB', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+    }, []);
 
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -83,25 +176,6 @@ export const PrintInvoice = ({
             maximumFractionDigits: 2
         }).format(value || 0);
     };
-
-    const primaryInvoiceSubTotal = cart.reduce((sum, item) => sum + Number(item.itemTotal || 0), 0);
-
-    const chunkCartArray = (array: any[], size: number) => {
-        const chunked = [];
-        for (let i = 0; i < array.length; i += size) {
-            chunked.push(array.slice(i, i + size));
-        }
-        return chunked;
-    };
-
-    const cartPages = chunkCartArray(cart, 2);
-
-    // Filter unique items from the entire cart to cleanly display active rates once at the top
-    const uniqueRatesToShow = cart.filter((item, index, self) =>
-        index === self.findIndex((t) => (
-            (t.carat || t.metal) === (item.carat || item.metal)
-        ))
-    );
 
     return (
         <div className="hidden print:block print:bg-white print:text-black">
@@ -113,21 +187,17 @@ export const PrintInvoice = ({
                             margin: 15mm 10mm 25mm 10mm; 
                         } 
                         body { visibility: hidden; background: white; }
-                        
                         .print-container { 
                             visibility: visible; 
                             -webkit-print-color-adjust: exact !important;
                             print-color-adjust: exact !important;
                         }
-                        
                         .print-page {
                             page-break-after: always;
                             break-after: page;
                             position: relative;
                         }
-                        
                         tr { page-break-inside: avoid !important; break-inside: avoid !important; }
-                        
                         .print-footer-fixed {
                             position: fixed;
                             bottom: 0;
@@ -166,10 +236,8 @@ export const PrintInvoice = ({
                         </div>
                     </div>
 
-                    {/* --- SIDE-BY-SIDE INFORMATION LAYOUT BLOCK --- */}
+                    {/* --- DETAILS OVERVIEW CONTROLLERS --- */}
                     <div className="w-full flex items-stretch justify-between gap-4">
-
-                        {/* --- BILL TO BOX --- */}
                         <div className="w-[68mm] border border-zinc-800 rounded-sm overflow-hidden bg-white shadow-sm flex flex-col">
                             <div className="bg-zinc-200/80 px-2 py-0.5 border-b border-zinc-800">
                                 <p className="font-extrabold text-zinc-900 text-[9.5px] uppercase tracking-wider">Bill To</p>
@@ -182,7 +250,6 @@ export const PrintInvoice = ({
                             </div>
                         </div>
 
-                        {/* --- VERTICAL, MINIMAL LIVE METAL RATES LOOKUP SECTION --- */}
                         <div className="w-[85mm] border border-zinc-800 rounded-sm overflow-hidden bg-white shadow-sm flex flex-col">
                             <div className="bg-zinc-200/80 px-2 py-0.5 border-b border-zinc-800 flex justify-between items-center">
                                 <p className="font-extrabold text-zinc-900 text-[9.5px] uppercase tracking-wider">Live Invoice Metal Rates Lookup</p>
@@ -212,10 +279,8 @@ export const PrintInvoice = ({
                                 })}
                             </div>
                         </div>
-
                     </div>
 
-                    {/* --- GLOBAL MEMO DESCRIPTION STRING HEADER (Page 1 Only) --- */}
                     <div className="w-full border-b border-zinc-800 pb-0.5 flex items-baseline mt-1">
                         <span className="font-bold text-zinc-900 text-[11px] uppercase tracking-wider mr-1.5">Memo</span>
                         <div className="flex-1 text-[11px] font-semibold text-zinc-800 pl-4 italic tracking-wide">
@@ -229,7 +294,6 @@ export const PrintInvoice = ({
                         return (
                             <div key={pageIdx} className="print-page flex flex-col space-y-4 w-full">
 
-                                {/* --- PRODUCT DATA TABLE --- */}
                                 <div className="w-full border border-zinc-800 rounded-sm overflow-hidden bg-transparent mt-1">
                                     <table className="w-full text-left border-collapse">
                                         <thead>
@@ -238,20 +302,16 @@ export const PrintInvoice = ({
                                                 <th className="py-1.5 px-3 w-32">Item Code</th>
                                                 <th className="py-1.5 px-3 flex-1">Description</th>
                                                 <th className="py-1.5 px-2 text-center">Purity</th>
-                                                <th className="py-1.5 px-2 w-24 text-center">Weight <br />(gm)</th>
-                                                <th className="py-1.5 px-2 w-20 text-center">Wastage (%)</th>
-                                                <th className="py-1.5 px-2 w-24 text-center">Wastage <br />(gm)</th>
+                                                <th className="py-1.5 px-2 w-24 text-center">Weight (gm)</th>
+                                                <th className="py-1.5 px-2 w-24 text-center">Wastage (gm)</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {pageItems.map((item, index) => {
                                                 const structuralSerialIndex = (pageIdx * 2) + index + 1;
-                                                const calcWastageGrams = item.wastageGram ? Number(item.wastageGram) : ((Number(item.netWeight || 0) * Number(item.wastagePercent || 0)) / 100);
-                                                const singleItemGrossGold = Number(item.netWeight || 0) + calcWastageGrams;
-                                                const localStonePrice = Number(item.stonesTotal || item.stonePrice || 0);
 
                                                 return (
-                                                    <React.Fragment key={index}>
+                                                    <React.Fragment key={item.id || index}>
                                                         <tr className="bg-zinc-100 opacity-70 border-b border-zinc-100 font-medium text-zinc-900 align-top">
                                                             <td className="py-2 px-2 text-center font-bold">
                                                                 {String(structuralSerialIndex).padStart(2, '0')}
@@ -265,58 +325,52 @@ export const PrintInvoice = ({
                                                             <td className="py-2 px-2 text-center font-bold">
                                                                 {item.carat || item.metal || '—'}
                                                             </td>
-                                                            <td className="py-2 px-2 text-right font-semibold">
-                                                                {Number(item.netWeight || 0).toFixed(3)}
-                                                            </td>
-                                                            <td className="py-2 px-2 text-center">
-                                                                {Number(item.wastagePercent || 0)}
+                                                            <td className="py-2 px-2 text-center font-semibold">
+                                                                {item.netW.toFixed(3)}
                                                             </td>
                                                             <td className="py-2 px-2 text-right font-semibold">
-                                                                {calcWastageGrams.toFixed(3)}
+                                                                {item.wasteW.toFixed(3)}
                                                             </td>
                                                         </tr>
 
                                                         <tr className="border-b border-zinc-800 text-[10px]">
-                                                            <td colSpan={2} className="py-3 px-3 bg-white">
+                                                            <td colSpan={2} className="py-3 px-3 bg-zinc-100 border border-zinc-800">
                                                                 {item.imageUrl && (
                                                                     <div className="w-28 h-20 border border-zinc-300 rounded-sm overflow-hidden p-0.5">
                                                                         <img src={item.imageUrl} className="w-full h-full object-cover" alt="Invoice Item Thumbnail View" />
                                                                     </div>
                                                                 )}
                                                             </td>
-                                                            <td colSpan={5} className="p-0">
+                                                            <td colSpan={4} className="p-0">
                                                                 <div className="w-full flex flex-col font-medium text-zinc-900 pt-2">
                                                                     <div className="flex border opacity-70 border-zinc-100 w-full items-center bg-zinc-100">
                                                                         <div className="py-1 px-3 font-bold text-zinc-950 w-32">Gold / Metal (gm)</div>
                                                                         <div className="py-1 px-3 text-right w-20">
-                                                                            {Number(singleItemGrossGold).toFixed(3)}
+                                                                            {item.grossMetalWeight.toFixed(3)}
                                                                         </div>
                                                                         <div className="py-1 px-3 text-center w-28">{item.making}</div>
                                                                         <div className="py-1 px-3 text-zinc-600 flex-1 whitespace-nowrap">per gm with making</div>
                                                                         <div className="py-1 px-2 text-right font-bold w-25">
-                                                                            {formatCurrency(Number(item.itemTotal || 0) - Number(item.stonesTotal || 0))}
+                                                                            {formatCurrency(item.absoluteMetalPrice)}
                                                                         </div>
                                                                     </div>
 
                                                                     <div className="flex border opacity-70 border-zinc-100 w-full bg-zinc-100">
                                                                         <div className="py-1 px-3 font-bold text-zinc-950 w-36">Stones weight & price</div>
                                                                         <div className="py-1 px-3 w-24 text-zinc-600">
-                                                                            {item.diamondDetails?.length > 0
-                                                                                ? `${item.diamondDetails.reduce((sum: number, d: any) => sum + Number(d.weight || 0), 0).toFixed(3)} ct.`
-                                                                                : '—'
-                                                                            }
+                                                                            {item.structuralAccentsWeight > 0 ? `${item.structuralAccentsWeight.toFixed(3)} ct.` : '—'}
                                                                         </div>
                                                                         <div className="py-1 px-3 w-32 text-right text-zinc-600">Rs</div>
                                                                         <div className="py-1 px-3 flex-1"></div>
                                                                         <div className="py-1 px-2 text-right font-bold w-28">
-                                                                            {formatCurrency(localStonePrice)}
+                                                                            {formatCurrency(item.stonePrice)}
                                                                         </div>
                                                                     </div>
 
                                                                     <div className="flex font-bold w-full text-zinc-950">
                                                                         <div className="py-1.5 px-3 flex-1 text-right ">Item Sub Total (Rs)</div>
                                                                         <div className="py-1.5 px-2 text-right w-28 text-[12px] font-extrabold">
-                                                                            {formatCurrency(item.itemTotal)}
+                                                                            {formatCurrency(Number(item.itemTotal))}
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -329,7 +383,6 @@ export const PrintInvoice = ({
                                     </table>
                                 </div>
 
-                                {/* --- ACCOUNT SUMMARY --- */}
                                 {isLastPage && (
                                     <div className="w-full flex justify-end page-break-inside-avoid">
                                         <div className="w-[85mm] flex flex-col font-bold text-zinc-900 text-right">
