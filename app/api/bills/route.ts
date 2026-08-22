@@ -42,7 +42,6 @@ export async function POST(req: Request) {
                 data: {
                     billSerialNumber,
                     discount: Number(discount) || 0,
-                    extraDiscount: Number(extraDiscount) || 0,
                     exchangeValue: Number(exchangeValue) || 0,
                     advance: Number(advance) || 0,
                     finalTotal: Number(finalTotal) || 0,
