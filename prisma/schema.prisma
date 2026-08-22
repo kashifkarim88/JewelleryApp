@@ -1,24 +1,23 @@
 generator client {
-  provider        = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
-
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DATABASE_URL") 
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
 }
 
 model Worker {
-id           Int      @id @default(autoincrement())
-name         String
-phone_number String   @unique
-worker_code  String   @unique
-createdAt    DateTime @default(now())
-updatedAt    DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  name         String
+  phone_number String   @unique
+  worker_code  String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
-model Category{
+model Category {
   id           Int      @id @default(autoincrement())
   product_name String   @unique
   Abbreviation String   @unique
@@ -28,29 +27,24 @@ model Category{
 }
 
 model StockItem {
-  id              String   @id @default(cuid())
-  createdAt       DateTime @default(now())
-  itemCode        String   @unique
-  metal           String   
-  carat           String?  
-  purity          Float?   
-  categoryName    String
-  productCode     String
-  description     String?
-  workerName      String
-  
-  netWeight       Float
-  wastageGram     Float
-  wastagePercent  Float
-  making          Float
-  imageUrl        String?
-
-  // UPDATED: Changed from Optional (?) to Array ([])
-  stoneDetails    StoneDetail[]
-  diamondDetails  DiamondDetail[]
-  
-  // Kept as Optional (?) assuming only one type of bead entry is needed
-  beadDetails     BeadDetail?
+  id             String          @id @default(cuid())
+  createdAt      DateTime        @default(now())
+  itemCode       String          @unique
+  metal          String
+  carat          String?
+  purity         Float?
+  categoryName   String
+  productCode    String
+  description    String?
+  workerName     String
+  netWeight      Float
+  wastageGram    Float
+  wastagePercent Float
+  making         Float
+  imageUrl       String?
+  beadDetails    BeadDetail?
+  diamondDetails DiamondDetail[]
+  stoneDetails   StoneDetail[]
 }
 
 model StoneDetail {
@@ -59,9 +53,7 @@ model StoneDetail {
   weight      Float?
   price       Float?
   squantity   Int?
-  
-  // Relation back to StockItem
-  stockItemId String    // REMOVED @unique here
+  stockItemId String
   stockItem   StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
 }
 
@@ -75,27 +67,106 @@ model DiamondDetail {
   rate        Float?
   price       Float?
   dquantity   Int?
-  
-  // Relation back to StockItem
-  stockItemId String    // REMOVED @unique here
+  stockItemId String
   stockItem   StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
 }
 
-model Diamond{
-  id String @id @default(cuid())
-  name String?
-}
-model Stone{
-  id String @id @default(cuid())
+model Diamond {
+  id   String  @id @default(cuid())
   name String?
 }
 
-// BeadDetail remains the same if it's always a single entry
+model Stone {
+  id   String  @id @default(cuid())
+  name String?
+}
+
 model BeadDetail {
   id          String    @id @default(cuid())
   weight      Float?
+  quantity    Int       @default(0)
   price       Float?
-  
   stockItemId String    @unique
   stockItem   StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
+}
+
+model Bill {
+  billSerialNumber String     @id @map("bill_serial_number")
+  customerName     String     @map("customer_name")
+  customerPhone    String?    @map("customer_phone")
+  sellerName       String?    @map("seller_name")
+  discount         Decimal    @default(0.00) @db.Decimal(12, 2)
+  exchangeValue    Decimal    @default(0.00) @map("exchange_value") @db.Decimal(12, 2)
+  advancePaid      Decimal    @default(0.00) @map("advance_paid") @db.Decimal(12, 2)
+  finalTotal       Decimal    @map("final_total") @db.Decimal(12, 2)
+  createdAt        DateTime   @default(now()) @map("created_at")
+  items            BillItem[]
+
+  @@map("bills")
+}
+
+model BillItem {
+  id               String        @id
+  billSerialNumber String        @map("bill_serial_number")
+  productCode      String?       @map("product_code")
+  itemCode         String?       @map("item_code")
+  categoryName     String?       @map("category_name")
+  description      String?
+  metal            String?
+  carat            String?
+  purity           String?
+  netWeight        Decimal?      @map("net_weight") @db.Decimal(10, 3)
+  wastagePercent   Decimal?      @map("wastage_percent") @db.Decimal(5, 2)
+  wastageGram      Decimal?      @map("wastage_gram") @db.Decimal(10, 3)
+  makingCharges    Decimal?      @map("making_charges") @db.Decimal(12, 2)
+  stonesTotal      Decimal?      @map("stones_total") @db.Decimal(12, 2)
+  itemTotal        Decimal       @map("item_total") @db.Decimal(12, 2)
+  workerName       String?       @map("worker_name")
+  imageUrl         String?       @map("image_url")
+  advance          Decimal       @default(0.00) @db.Decimal(12, 2)
+  createdAt        DateTime?     @map("created_at")
+  bill             Bill          @relation(fields: [billSerialNumber], references: [billSerialNumber], onDelete: Cascade)
+  beadDetails      ItemBead?
+  diamondDetails   ItemDiamond[]
+  stoneDetails     ItemStone[]
+
+  @@map("bill_items")
+}
+
+model ItemStone {
+  id         String   @id
+  billItemId String   @map("bill_item_id")
+  name       String?
+  weight     Decimal? @db.Decimal(10, 3)
+  quantity   Int?
+  price      Decimal? @db.Decimal(12, 2)
+  billItem   BillItem @relation(fields: [billItemId], references: [id], onDelete: Cascade)
+
+  @@map("item_stones")
+}
+
+model ItemDiamond {
+  id         String   @id
+  billItemId String   @map("bill_item_id")
+  name       String?
+  clarity    String?
+  color      String?
+  cut        String?
+  weight     Decimal? @db.Decimal(10, 3)
+  quantity   Int?
+  rate       Decimal? @db.Decimal(12, 2)
+  price      Decimal? @db.Decimal(12, 2)
+  billItem   BillItem @relation(fields: [billItemId], references: [id], onDelete: Cascade)
+
+  @@map("item_diamonds")
+}
+
+model ItemBead {
+  id         String   @id
+  billItemId String   @unique @map("bill_item_id")
+  weight     Decimal? @db.Decimal(10, 3)
+  price      Decimal? @db.Decimal(12, 2)
+  billItem   BillItem @relation(fields: [billItemId], references: [id], onDelete: Cascade)
+
+  @@map("item_beads")
 }

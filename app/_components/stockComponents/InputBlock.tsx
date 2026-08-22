@@ -21,7 +21,7 @@ const InputBlock = ({
     type = "text",
     inputRef,
     onAction,
-    onFocus, // 🚩 Destructured property here
+    onFocus,
     className = ""
 }: InputBlockProps) => {
     return (
@@ -33,9 +33,9 @@ const InputBlock = ({
                 <input
                     ref={inputRef}
                     type={type}
-                    value={value}
+                    value={value ?? ""} // 👈 Prevents undefined from being passed to the input
                     onChange={(e) => onChange(e.target.value)}
-                    onFocus={onFocus} // 🚩 Bound natively to the native HTML input element
+                    onFocus={onFocus}
                     placeholder={placeholder}
                     className={`w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl outline-none transition-all focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-sm text-slate-700 ${onAction ? 'pr-10' : ''}`}
                 />

@@ -34,12 +34,13 @@ export function useStockLogic(stoneTrigger?: number) {
     const [stoneTypes, setStoneTypes] = useState<any[]>([]);
     const [isLoadingStones, setIsLoadingStones] = useState(false);
 
+    // Initialized palladiumPercentage with default "33" and added bQty to beads state
     const [vals, setVals] = useState({
-        worker: "", making: "", netWeight: "", WastageGram: "", wastage: "", palladiumPercentage: "",
+        worker: "", making: "", netWeight: "", WastageGram: "", wastage: "", palladiumPercentage: "33",
         // Stone Buffer
         sName: "", sWgt: "", sQty: "", sPrice: "",
         // Beads
-        bName: "", bWgt: "", bPrice: "",
+        bName: "", bWgt: "", bQty: "", bPrice: "",
         // Diamond Buffer
         dName: "", dCut: "", dColor: "", dClarity: "", dWgt: "", dRate: "", dQty: "", dPrice: "",
     });
@@ -59,15 +60,15 @@ export function useStockLogic(stoneTrigger?: number) {
         dColorRef: useRef<HTMLInputElement>(null),
         dPriceRef: useRef<HTMLInputElement>(null),
         bWgtRef: useRef<HTMLInputElement>(null),
+        bQtyRef: useRef<HTMLInputElement>(null),
         dRateRef: useRef<HTMLInputElement>(null),
         dQtyRef: useRef<HTMLInputElement>(null),
     };
 
-
     const fetchStones = async () => {
         try {
             setIsLoadingStones(true);
-            const res = await fetch('/api/stones', { cache: 'no-store' }); // Break NextJS cache
+            const res = await fetch('/api/stones', { cache: 'no-store' });
             if (res.ok) {
                 const data = await res.json();
                 setStoneTypes(data);
@@ -81,7 +82,7 @@ export function useStockLogic(stoneTrigger?: number) {
 
     useEffect(() => {
         fetchStones();
-    }, [stoneTrigger ?? 0]); // Refetch stones when the trigger changes (e.g., after adding a new stone)
+    }, [stoneTrigger ?? 0]);
 
     // --- List Handlers ---
     const handleAddStone = () => {
@@ -115,7 +116,7 @@ export function useStockLogic(stoneTrigger?: number) {
 
     // --- Logical Checks ---
     const isStoneDirty = useMemo(() => !!(vals.sName || vals.sWgt || vals.sPrice) || stoneList.length > 0, [vals, stoneList]);
-    const isBeadsDirty = useMemo(() => !!(vals.bWgt || vals.bPrice), [vals]);
+    const isBeadsDirty = useMemo(() => !!((vals as any).bWgt || (vals as any).beadsWgt || (vals as any).bQty || (vals as any).beadsQty || (vals as any).bPrice || (vals as any).beadsPrice), [vals]);
     const isDiamondDirty = useMemo(() => !!(vals.dName || vals.dWgt || vals.dColor || vals.dCut || vals.dClarity || vals.dRate || vals.dPrice) || diamondList.length > 0, [vals, diamondList]);
 
     // --- Error Clearing Effects ---
@@ -189,11 +190,17 @@ export function useStockLogic(stoneTrigger?: number) {
             const totalSQty = stoneList.length > 0 ? stoneList.reduce((acc, cur) => acc + Number(cur.qty || 0), 0).toString() : vals.sQty;
             const totalDQty = diamondList.length > 0 ? diamondList.reduce((acc, cur) => acc + Number(cur.qty || 0), 0).toString() : vals.dQty;
 
+            const formattedCarat = selectedCarat ? selectedCarat.replace(/ct/gi, 'K').trim() : null;
+
+            const purityValue = selectedMetal.toLowerCase() === "palladium"
+                ? (vals.palladiumPercentage || "33")
+                : null;
+
             const payload = {
                 itemCode: nextItemCode,
                 metal: selectedMetal,
-                carat: selectedMetal === "Gold" ? selectedCarat : null,
-                purity: selectedMetal === "Palladium" ? vals.palladiumPercentage : null,
+                carat: selectedMetal.toLowerCase() === "gold" ? formattedCarat : null,
+                purity: purityValue,
                 categoryName: catSearch,
                 productCode: prodCode,
                 description: finalDescription,
@@ -209,7 +216,11 @@ export function useStockLogic(stoneTrigger?: number) {
                 stoneData: stoneList.length > 0
                     ? stoneList.map(s => ({ name: s.name, weight: s.weight, qty: s.qty, price: s.price }))
                     : (isStoneDirty ? [{ name: vals.sName, weight: vals.sWgt, qty: vals.sQty, price: vals.sPrice }] : null),
-                beadData: isBeadsDirty ? { name: vals.bName, weight: vals.bWgt, price: vals.bPrice } : null,
+                beadData: isBeadsDirty ? {
+                    weight: (vals as any).bWgt || (vals as any).beadsWgt || "0",
+                    quantity: (vals as any).bQty || (vals as any).beadsQty || "0",
+                    price: (vals as any).bPrice || (vals as any).beadsPrice || "0"
+                } : null,
                 diamondData: diamondList.length > 0
                     ? diamondList.map(d => ({ name: d.name, weight: d.weight, color: d.color, cut: d.cut, clarity: d.clarity, rate: d.rate, qty: d.qty, price: d.price }))
                     : (isDiamondDirty ? [{ name: vals.dName, weight: vals.dWgt, color: vals.dColor, cut: vals.dCut, clarity: vals.dClarity, rate: vals.dRate, qty: vals.dQty, price: vals.dPrice }] : null),
@@ -224,8 +235,9 @@ export function useStockLogic(stoneTrigger?: number) {
             if (res.ok) {
                 alert("Inventory Updated Successfully!");
                 setVals({
-                    worker: "", making: "", netWeight: "", WastageGram: "", wastage: "", palladiumPercentage: "",
-                    sName: "", sWgt: "", sQty: "", sPrice: "", bName: "", bWgt: "", bPrice: "",
+                    worker: "", making: "", netWeight: "", WastageGram: "", wastage: "", palladiumPercentage: "33",
+                    sName: "", sWgt: "", sQty: "", sPrice: "",
+                    bName: "", bWgt: "", bQty: "", bPrice: "",
                     dName: "", dCut: "", dColor: "", dClarity: "", dWgt: "", dRate: "", dQty: "", dPrice: ""
                 });
                 setStoneList([]);

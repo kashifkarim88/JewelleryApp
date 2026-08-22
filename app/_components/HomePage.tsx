@@ -7,7 +7,7 @@ import DesktopSidebar from './DesktopSidebar';
 import IndexPage from './IndexPage';
 import StockPage from './StockPage';
 import InvoicePage from './InvoicePage';
-
+import SalesHistory from './SalesHistory';
 export default function HomePage() {
     const [activeTab, setActiveTab] = useState('Index');
 
@@ -20,6 +20,8 @@ export default function HomePage() {
                 return <StockPage />;
             case 'Billing':
                 return <InvoicePage />;
+            case 'Sales History':
+                return <SalesHistory />;
             default:
                 return <IndexPage />;
         }

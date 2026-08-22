@@ -251,6 +251,20 @@ export const CartItemCard = memo(({
                                             />
                                         </div>
                                     </div>
+                                    <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50/50 border border-dashed border-slate-200/60">
+                                        <div className="flex items-center gap-3 pl-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">Total Weight</span>
+                                        </div>
+                                        <div className="w-36 opacity-65">
+                                            <FullInput
+                                                label=""
+                                                value={(wastageGrams + item.netWeight).toFixed(3)}
+                                                disabled
+                                                onChange={() => { }}
+                                            />
+                                        </div>
+                                    </div>
 
                                     {/* 4. Stone Price (Calculated Output) */}
                                     <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50/50 border border-dashed border-slate-200/60">
