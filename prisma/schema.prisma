@@ -96,6 +96,7 @@ model Bill {
   customerPhone    String?    @map("customer_phone")
   sellerName       String?    @map("seller_name")
   discount         Decimal    @default(0.00) @db.Decimal(12, 2)
+  extraDiscount    Float      @default(0.00)
   exchangeValue    Decimal    @default(0.00) @map("exchange_value") @db.Decimal(12, 2)
   advancePaid      Decimal    @default(0.00) @map("advance_paid") @db.Decimal(12, 2)
   finalTotal       Decimal    @map("final_total") @db.Decimal(12, 2)

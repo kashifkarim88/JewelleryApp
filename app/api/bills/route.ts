@@ -42,8 +42,9 @@ export async function POST(req: Request) {
                 data: {
                     billSerialNumber,
                     discount: Number(discount) || 0,
+                    extraDiscount: Number(extraDiscount) || 0,
                     exchangeValue: Number(exchangeValue) || 0,
-                    advance: Number(advance) || 0,
+                    advancePaid: Number(advance) || 0,
                     finalTotal: Number(finalTotal) || 0,
                     customerName: customer?.name || "Walk-in Customer",
                     customerPhone: customer?.phone || null,
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
                                 itemTotal: Number(item.itemTotal) || 0,
                                 workerName: item.workerName || null,
                                 imageUrl: item.imageUrl || null,
-                                advance: item.advance ? Number(item.advance) : 0,
+                                advancePaid: item.advance ? Number(item.advance) : 0,
                                 createdAt: new Date(),
 
                                 // Nested Stone details
