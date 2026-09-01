@@ -159,14 +159,6 @@ export const PrintInvoice = ({
         return Number((details as DetailItem).weight) || 0;
     };
 
-    const primaryInvoiceSubTotal = useMemo(() => {
-        return cart.reduce(
-            (sum, item) =>
-                sum + (Number(item.peritemTotal || item.itemTotal) || 0),
-            0
-        );
-    }, [cart]);
-
     const uniqueRatesToShow = useMemo(() => {
         return cart.filter(
             (item, index, self) =>
@@ -214,27 +206,13 @@ export const PrintInvoice = ({
     const cartPages = useMemo((): ProcessedCartItem[][] => {
         const chunks: ProcessedCartItem[][] = [];
 
+        // Exactly two items per printed page.
         for (let i = 0; i < processedCartItems.length; i += 2) {
             chunks.push(processedCartItems.slice(i, i + 2));
         }
 
         return chunks;
     }, [processedCartItems]);
-
-    const totalCartAdvance = useMemo(() => {
-        return cart.reduce(
-            (sum, item) => sum + (Number(item.advance) || 0),
-            0
-        );
-    }, [cart]);
-
-    const computedAdvance = useMemo(() => {
-        if (totalCartAdvance > 0) {
-            return totalCartAdvance + advance;
-        }
-
-        return Number(advance) || 0;
-    }, [totalCartAdvance, advance]);
 
     useEffect(() => {
         console.log(
@@ -348,117 +326,119 @@ export const PrintInvoice = ({
 
             <div className="print-container font-sans text-[9.5px] text-zinc-800 leading-tight antialiased select-none">
 
-                {/* --- BACKGROUND WATERMARK LAYER --- */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] select-none z-0 overflow-hidden">
-                    <p className="text-[42px] font-black tracking-widest text-zinc-900 uppercase transform -rotate-35 whitespace-nowrap">
-                        Hamidullah Jewellery
-                    </p>
-                </div>
-
                 <div className="relative z-10 w-full flex flex-col pb-[10mm]">
 
                     {/* --- CART ITEMS PAGE ENGINE --- */}
                     {cartPages.map((pageItems, pageIdx) => {
-                        const isFirstPage = pageIdx === 0;
-                        const isLastPage = pageIdx === cartPages.length - 1;
+                        // Each printed page contains exactly two items (or one on the final page).
+                        // Financial totals below are calculated only from this page's items.
 
                         return (
                             <div
                                 key={pageIdx}
-                                className="print-page flex flex-col space-y-2 w-full"
+                                className="print-page flex flex-col space-y-2 w-full min-h-0"
                             >
 
-                                {/* --- HEADER BLOCK (Only rendered on Page 1) --- */}
-                                {isFirstPage && (
-                                    <>
-                                        <div className="flex justify-between items-start w-full">
+                                {/* --- HEADER BLOCK (RENDERED ON EVERY PAGE) --- */}
+                                <>
+                                    <div className="flex justify-between items-start w-full">
 
-                                            <div className="flex flex-col">
+                                        <div className="flex flex-col">
 
-                                                <h1 className="text-xl font-extrabold tracking-tight text-zinc-900">
-                                                    Sale Invoice
-                                                </h1>
+                                            <h1 className="text-xl font-extrabold tracking-tight text-zinc-900">
+                                                Sale Invoice
+                                            </h1>
 
-                                                <div className="mt-0.5 flex flex-col items-start">
+                                            <div className="mt-0.5 flex flex-col items-start">
 
-                                                    <div
-                                                        className="h-6 w-32 bg-zinc-900 border border-zinc-950 flex items-baseline justify-between px-1.5 pt-0.5 overflow-hidden"
-                                                        style={{
-                                                            backgroundImage:
-                                                                "repeating-linear-gradient(90deg, #000, #000 2px, #fff 2px, #fff 4px, #000 4px, #000 7px, #fff 7px, #fff 8px)",
-                                                        }}
-                                                    ></div>
+                                                <div
+                                                    className="h-6 w-32 bg-zinc-900 border border-zinc-950 flex items-baseline justify-between px-1.5 pt-0.5 overflow-hidden"
+                                                    style={{
+                                                        backgroundImage:
+                                                            "repeating-linear-gradient(90deg, #000, #000 2px, #fff 2px, #fff 4px, #000 4px, #000 7px, #fff 7px, #fff 8px)",
+                                                    }}
+                                                ></div>
 
-                                                    <span className="text-[7.5px] font-mono tracking-[0.3em] text-zinc-700 mt-0.5 pl-2">
-                                                        * 0 2 0 0 0 0 6 3 2 8 *
-                                                    </span>
+                                                <span className="text-[7.5px] font-mono tracking-[0.3em] text-zinc-700 mt-0.5 pl-2">
+                                                    * 0 2 0 0 0 0 6 3 2 8 *
+                                                </span>
 
-                                                </div>
-
-                                            </div>
-
-                                            <div className="text-right pt-0.5">
-                                                <p className="text-[10px] font-medium">
-                                                    <span className="font-bold text-zinc-900">
-                                                        Date:
-                                                    </span>{" "}
-                                                    {formattedDate}
-                                                </p>
                                             </div>
 
                                         </div>
 
-                                        {/* --- DETAILS OVERVIEW CONTROLLERS --- */}
-                                        <div className="w-full flex items-stretch justify-between gap-2.5">
+                                        <div className="text-right pt-0.5">
+                                            <p className="text-[10px] font-medium">
+                                                <span className="font-bold text-zinc-900">
+                                                    Date:
+                                                </span>{" "}
+                                                {formattedDate}
+                                            </p>
+                                        </div>
 
-                                            <div className="w-[62mm] border border-zinc-800 rounded-sm overflow-hidden bg-white shadow-sm flex flex-col">
+                                    </div>
 
-                                                <div className="bg-zinc-200/80 px-1.5 py-0.5 border-b border-zinc-800">
-                                                    <p className="font-extrabold text-zinc-900 text-[8px] uppercase tracking-wider">
-                                                        Bill To
-                                                    </p>
-                                                </div>
+                                    {/* --- DETAILS OVERVIEW CONTROLLERS --- */}
+                                    <div className="w-full flex items-stretch justify-between gap-2.5">
 
-                                                <div className="p-1 space-y-0.5 text-zinc-900 font-medium flex-1 justify-center flex flex-col">
+                                        <div className="w-[62mm] border border-zinc-800 rounded-sm overflow-hidden bg-white shadow-sm flex flex-col">
 
-                                                    <p className="font-black text-[10px] tracking-tight text-zinc-950 leading-tight">
-                                                        {customer?.name || "Walk-in Customer"}
-                                                    </p>
+                                            <div className="bg-zinc-200/80 px-1.5 py-0.5 border-b border-zinc-800">
+                                                <p className="font-extrabold text-zinc-900 text-[8px] uppercase tracking-wider">
+                                                    Bill To
+                                                </p>
+                                            </div>
 
-                                                    <p className="text-[8.5px]">
-                                                        Contact #: {customer?.phone || "N/A"}
-                                                    </p>
+                                            <div className="p-1 space-y-0.5 text-zinc-900 font-medium flex-1 justify-center flex flex-col">
 
-                                                    <p className="text-[8.5px]">
-                                                        Seller:{" "}
-                                                        <span className="font-semibold">
-                                                            {customer?.seller || "N/A"}
-                                                        </span>
-                                                    </p>
+                                                <p className="font-black text-[10px] tracking-tight text-zinc-950 leading-tight">
+                                                    {customer?.name || "Walk-in Customer"}
+                                                </p>
 
-                                                    <p className="text-[8.5px] text-zinc-500">
-                                                        Pakistan
-                                                    </p>
+                                                <p className="text-[8.5px]">
+                                                    Contact #: {customer?.phone || "N/A"}
+                                                </p>
 
-                                                </div>
+                                                <p className="text-[8.5px]">
+                                                    Seller:{" "}
+                                                    <span className="font-semibold">
+                                                        {customer?.seller || "N/A"}
+                                                    </span>
+                                                </p>
+
+                                                <p className="text-[8.5px] text-zinc-500">
+                                                    Pakistan
+                                                </p>
 
                                             </div>
 
-                                            <div className="w-[85mm] border border-zinc-800 rounded-sm overflow-hidden bg-white shadow-sm flex flex-col">
+                                        </div>
 
-                                                <div className="bg-zinc-200/80 px-1.5 py-0.5 border-b border-zinc-800 flex justify-between items-center">
+                                        <div className="w-[85mm] border border-zinc-800 rounded-sm overflow-hidden bg-white shadow-sm flex flex-col">
 
-                                                    <p className="font-extrabold text-zinc-900 text-[8px] uppercase tracking-wider">
-                                                        Live Invoice Metal Rates Lookup
-                                                    </p>
+                                            <div className="bg-zinc-200/80 px-1.5 py-0.5 border-b border-zinc-800 flex justify-between items-center">
 
-                                                    <span className="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                                                <p className="font-extrabold text-zinc-900 text-[8px] uppercase tracking-wider">
+                                                    Live Invoice Metal Rates Lookup
+                                                </p>
 
-                                                </div>
+                                                <span className="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
 
-                                                <div className="p-1 flex-1 flex flex-col justify-center space-y-0.5">
+                                            </div>
 
-                                                    {uniqueRatesToShow.map((item, idx) => {
+                                            <div className="p-1 flex-1 flex flex-col justify-center space-y-0.5">
+
+                                                {pageItems
+                                                    .filter(
+                                                        (item, index, self) =>
+                                                            index ===
+                                                            self.findIndex(
+                                                                (t) =>
+                                                                    (t.carat || t.metal) ===
+                                                                    (item.carat || item.metal)
+                                                            )
+                                                    )
+                                                    .map((item, idx) => {
 
                                                         const computedRate =
                                                             getItemRate(item);
@@ -498,40 +478,39 @@ export const PrintInvoice = ({
 
                                                     })}
 
-                                                </div>
-
                                             </div>
 
                                         </div>
 
-                                        {/* --- MEMO --- */}
-                                        <div className="w-full border-b border-zinc-800 pb-0.5 flex items-baseline">
+                                    </div>
 
-                                            <span className="font-bold text-zinc-900 text-[9px] uppercase tracking-wider mr-1.5">
-                                                Memo
-                                            </span>
+                                    {/* --- MEMO --- */}
+                                    <div className="w-full border-b border-zinc-800 pb-0.5 flex items-baseline">
 
-                                            <div className="flex-1 text-[9px] font-semibold text-zinc-800 pl-2 italic tracking-wide truncate">
-                                                {cart
-                                                    .map(
-                                                        (item) =>
-                                                            `${item.carat ||
-                                                            item.metal ||
-                                                            "21K"} - ${item.categoryName ||
-                                                            "Jewellery Item"
-                                                            }`
-                                                    )
-                                                    .join(", ")}
-                                            </div>
+                                        <span className="font-bold text-zinc-900 text-[9px] uppercase tracking-wider mr-1.5">
+                                            Memo
+                                        </span>
 
+                                        <div className="flex-1 text-[9px] font-semibold text-zinc-800 pl-2 italic tracking-wide truncate">
+                                            {pageItems
+                                                .map(
+                                                    (item) =>
+                                                        `${item.carat ||
+                                                        item.metal ||
+                                                        "21K"} - ${item.categoryName ||
+                                                        "Jewellery Item"
+                                                        }`
+                                                )
+                                                .join(", ")}
                                         </div>
-                                    </>
-                                )}
+
+                                    </div>
+                                </>
 
                                 {/* --- TABLE CONTENT --- */}
                                 <div className="w-full border border-zinc-800 rounded-sm overflow-hidden bg-transparent">
 
-                                    <table className="w-full text-left border-collapse table-fixed">
+                                    <table className="w-full text-left border-collapse table-fixed min-w-0">
 
                                         <thead>
 
@@ -630,7 +609,7 @@ export const PrintInvoice = ({
                                                         </tr>
 
                                                         {/* Detail Breakdown Row */}
-                                                        <tr className="border-b border-zinc-800 text-[8.5px]">
+                                                        <tr className="border-b border-zinc-800 text-[8.5px] min-w-0">
 
                                                             <td
                                                                 colSpan={2}
@@ -666,291 +645,292 @@ export const PrintInvoice = ({
 
                                                             <td
                                                                 colSpan={6}
-                                                                className="p-0 align-top"
+                                                                className="p-0 align-top min-w-0 overflow-hidden"
                                                             >
-                                                                <div className="w-full flex flex-col font-medium py-0.5 text-zinc-900">
-
+                                                                <div className="w-full min-w-0 flex flex-col font-medium py-0.5 text-zinc-900 overflow-hidden">
                                                                     {/* ============================= */}
                                                                     {/* GOLD / METAL ROW */}
                                                                     {/* ============================= */}
 
-                                                                    <div className="flex border-b border-zinc-200 w-full items-center bg-zinc-100 py-0.5">
+                                                                    <div className="w-full border-b border-zinc-200 bg-zinc-100 min-w-0">
 
-                                                                        {/* Gold / Metal */}
-                                                                        <div className="px-1.5 font-bold text-zinc-950 w-[25%] shrink-0 whitespace-nowrap">
-                                                                            Gold / Metal (gm)
+                                                                        {/* Sub Total - Row 1 */}
+                                                                        <div className="grid grid-cols-[minmax(70px,1fr)_auto] items-center gap-2 px-1.5 py-0.5 min-w-0">
+                                                                            <div className="font-bold text-zinc-950 whitespace-nowrap">
+                                                                                Sub Totals
+                                                                            </div>
+
+                                                                            <div className="text-right font-mono font-semibold whitespace-nowrap shrink-0">
+                                                                                {formatCurrency(
+                                                                                    (item.absoluteMetalPrice || 0) -
+                                                                                    (Number(item.making) || 0)
+                                                                                )}
+                                                                            </div>
                                                                         </div>
 
-                                                                        {/* Gold Price */}
-                                                                        <div className="px-1.5 text-right w-[18%] shrink-0 font-mono whitespace-nowrap">
-                                                                            {formatCurrency(
-                                                                                (item.absoluteMetalPrice || 0) -
-                                                                                (Number(item.making) || 0)
-                                                                            )}
-                                                                        </div>
+                                                                        {/* Making - Row 2 */}
+                                                                        <div className="grid grid-cols-[minmax(70px,1fr)_auto] items-center gap-2 px-1.5 py-0.5 min-w-0 border-t border-zinc-200">
+                                                                            <div className="font-bold text-zinc-950 whitespace-nowrap">
+                                                                                Making
+                                                                            </div>
 
-                                                                        {/* Making Label */}
-                                                                        <div className="px-1.5 text-zinc-600 w-[10%] shrink-0 whitespace-nowrap text-[8px] text-center">
-                                                                            Making
-                                                                        </div>
-
-                                                                        {/* Making Price */}
-                                                                        <div className="px-1.5 text-center w-[14%] shrink-0 font-mono whitespace-nowrap">
-                                                                            {formatCurrency(Number(item.making) || 0)}
-                                                                        </div>
-
-                                                                        {/* Total With Making Label */}
-                                                                        <div className="px-1.5 text-zinc-600 w-[18%] shrink-0 whitespace-nowrap text-[8px] text-center">
-                                                                            Total with making
-                                                                        </div>
-
-                                                                        {/* Total With Making Price */}
-                                                                        <div className="px-1.5 text-right font-bold w-[15%] shrink-0 font-mono whitespace-nowrap">
-                                                                            {formatCurrency(
-                                                                                item.absoluteMetalPrice || 0
-                                                                            )}
+                                                                            <div className="text-right font-mono font-semibold whitespace-nowrap shrink-0">
+                                                                                {formatCurrency(Number(item.making) || 0)}
+                                                                            </div>
                                                                         </div>
 
                                                                     </div>
+
+
 
 
                                                                     {/* ============================= */}
                                                                     {/* STONES */}
                                                                     {/* ============================= */}
+                                                                    {
+                                                                        item.stoneDetails && item.stoneDetails.length > 0 && (
+                                                                            <div className="grid grid-cols-[64px_minmax(0,1fr)] w-full border-b border-zinc-200 bg-zinc-100 min-w-0">
 
-                                                                    <div className="flex w-full border-b border-zinc-200 bg-zinc-100">
+                                                                                <div className="px-1.5 py-0.5 font-bold text-zinc-950 whitespace-nowrap">
+                                                                                    Stones
+                                                                                </div>
 
-                                                                        <div className="px-1.5 py-0.5 font-bold text-zinc-950 w-24 shrink-0">
-                                                                            Stones
-                                                                        </div>
+                                                                                <div className="px-1.5 py-0.5 text-zinc-700 min-w-0 font-medium overflow-hidden">
 
-                                                                        <div className="px-1.5 py-0.5 text-zinc-700 flex-1 font-medium">
+                                                                                    {item.stoneDetails &&
+                                                                                        item.stoneDetails.length > 0 ? (
 
-                                                                            {item.stoneDetails &&
-                                                                                item.stoneDetails.length > 0 ? (
+                                                                                        <div className="flex flex-col">
 
-                                                                                <div className="flex flex-col">
+                                                                                            {item.stoneDetails.map((stone, index) => (
 
-                                                                                    {item.stoneDetails.map((stone, index) => (
+                                                                                                <div
+                                                                                                    key={index}
+                                                                                                    className="flex justify-between items-center"
+                                                                                                >
 
-                                                                                        <div
-                                                                                            key={index}
-                                                                                            className="flex justify-between items-center"
-                                                                                        >
+                                                                                                    <span>
+                                                                                                        {stone.name || "Unknown Stone"} -{" "}
+                                                                                                        {stone.weight ?? 0} ct
+                                                                                                    </span>
 
-                                                                                            <span>
-                                                                                                {stone.name || "Unknown Stone"} -{" "}
-                                                                                                {stone.weight ?? 0} ct
-                                                                                            </span>
+                                                                                                    <span className="font-mono font-semibold whitespace-nowrap shrink-0">
+                                                                                                        Rs{" "}
+                                                                                                        {formatCurrency(
+                                                                                                            Number(stone.price) || 0
+                                                                                                        )}
+                                                                                                    </span>
 
-                                                                                            <span className="font-mono font-semibold whitespace-nowrap">
-                                                                                                Rs{" "}
-                                                                                                {formatCurrency(
-                                                                                                    Number(stone.price) || 0
-                                                                                                )}
-                                                                                            </span>
+                                                                                                </div>
+
+                                                                                            ))}
+
+                                                                                            {/* Total Stone Price */}
+                                                                                            <div className="border-t border-zinc-300 mt-0.5 pt-0.5 flex justify-between font-bold text-zinc-950">
+
+                                                                                                <span>
+                                                                                                    Total Stone Price
+                                                                                                </span>
+
+                                                                                                <span className="font-mono whitespace-nowrap">
+                                                                                                    Rs{" "}
+                                                                                                    {formatCurrency(
+                                                                                                        item.stoneDetails.reduce(
+                                                                                                            (total, stone) =>
+                                                                                                                total +
+                                                                                                                (Number(stone.price) || 0),
+                                                                                                            0
+                                                                                                        )
+                                                                                                    )}
+                                                                                                </span>
+
+                                                                                            </div>
 
                                                                                         </div>
 
-                                                                                    ))}
-
-                                                                                    {/* Total Stone Price */}
-                                                                                    <div className="border-t border-zinc-300 mt-0.5 pt-0.5 flex justify-between font-bold text-zinc-950">
-
-                                                                                        <span>
-                                                                                            Total Stone Price
-                                                                                        </span>
-
-                                                                                        <span className="font-mono whitespace-nowrap">
-                                                                                            Rs{" "}
-                                                                                            {formatCurrency(
-                                                                                                item.stoneDetails.reduce(
-                                                                                                    (total, stone) =>
-                                                                                                        total +
-                                                                                                        (Number(stone.price) || 0),
-                                                                                                    0
-                                                                                                )
-                                                                                            )}
-                                                                                        </span>
-
-                                                                                    </div>
+                                                                                    ) : (
+                                                                                        "—"
+                                                                                    )}
 
                                                                                 </div>
 
-                                                                            ) : (
-                                                                                "—"
-                                                                            )}
+                                                                            </div>)
+                                                                    }
 
-                                                                        </div>
-
-                                                                    </div>
 
 
                                                                     {/* ============================= */}
                                                                     {/* DIAMONDS */}
                                                                     {/* ============================= */}
 
-                                                                    <div className="flex w-full border-b border-zinc-200 bg-zinc-100">
+                                                                    {
+                                                                        item.diamondDetails && item.diamondDetails.length > 0 && (
+                                                                            <div className="grid grid-cols-[64px_minmax(0,1fr)] w-full border-b border-zinc-200 bg-zinc-100 min-w-0">
 
-                                                                        <div className="px-1.5 py-0.5 font-bold text-zinc-950 w-24 shrink-0">
-                                                                            Diamonds
-                                                                        </div>
+                                                                                <div className="px-1.5 py-0.5 font-bold text-zinc-950 whitespace-nowrap">
+                                                                                    Diamonds
+                                                                                </div>
 
-                                                                        <div className="px-1.5 py-0.5 text-zinc-700 flex-1 font-medium">
+                                                                                <div className="px-1.5 py-0.5 text-zinc-700 min-w-0 font-medium overflow-hidden">
 
-                                                                            {item.diamondDetails &&
-                                                                                item.diamondDetails.length > 0 ? (
+                                                                                    {item.diamondDetails &&
+                                                                                        item.diamondDetails.length > 0 ? (
 
-                                                                                <div className="flex flex-col">
+                                                                                        <div className="flex flex-col">
 
-                                                                                    {item.diamondDetails.map(
-                                                                                        (diamond, index) => (
+                                                                                            {item.diamondDetails.map(
+                                                                                                (diamond, index) => (
 
-                                                                                            <div
-                                                                                                key={index}
-                                                                                                className="flex justify-between items-center"
-                                                                                            >
+                                                                                                    <div
+                                                                                                        key={index}
+                                                                                                        className="flex justify-between items-center"
+                                                                                                    >
+
+                                                                                                        <span>
+                                                                                                            {diamond.name || "Diamond"} -{" "}
+                                                                                                            {diamond.weight ?? 0} ct
+                                                                                                        </span>
+
+                                                                                                        <span className="font-mono font-semibold whitespace-nowrap shrink-0">
+                                                                                                            Rs{" "}
+                                                                                                            {formatCurrency(
+                                                                                                                Number(diamond.price) || 0
+                                                                                                            )}
+                                                                                                        </span>
+
+                                                                                                    </div>
+
+                                                                                                )
+                                                                                            )}
+
+                                                                                            {/* Total Diamond Price */}
+                                                                                            <div className="border-t border-zinc-300 mt-0.5 pt-0.5 flex justify-between font-bold text-zinc-950">
 
                                                                                                 <span>
-                                                                                                    {diamond.name || "Diamond"} -{" "}
-                                                                                                    {diamond.weight ?? 0} ct
+                                                                                                    Total Diamond Price
                                                                                                 </span>
 
-                                                                                                <span className="font-mono font-semibold whitespace-nowrap">
+                                                                                                <span className="font-mono whitespace-nowrap">
                                                                                                     Rs{" "}
                                                                                                     {formatCurrency(
-                                                                                                        Number(diamond.price) || 0
+                                                                                                        item.diamondDetails.reduce(
+                                                                                                            (total, diamond) =>
+                                                                                                                total +
+                                                                                                                (Number(diamond.price) || 0),
+                                                                                                            0
+                                                                                                        )
                                                                                                     )}
                                                                                                 </span>
 
                                                                                             </div>
 
-                                                                                        )
+                                                                                        </div>
+
+                                                                                    ) : (
+                                                                                        "—"
                                                                                     )}
-
-                                                                                    {/* Total Diamond Price */}
-                                                                                    <div className="border-t border-zinc-300 mt-0.5 pt-0.5 flex justify-between font-bold text-zinc-950">
-
-                                                                                        <span>
-                                                                                            Total Diamond Price
-                                                                                        </span>
-
-                                                                                        <span className="font-mono whitespace-nowrap">
-                                                                                            Rs{" "}
-                                                                                            {formatCurrency(
-                                                                                                item.diamondDetails.reduce(
-                                                                                                    (total, diamond) =>
-                                                                                                        total +
-                                                                                                        (Number(diamond.price) || 0),
-                                                                                                    0
-                                                                                                )
-                                                                                            )}
-                                                                                        </span>
-
-                                                                                    </div>
 
                                                                                 </div>
 
-                                                                            ) : (
-                                                                                "—"
-                                                                            )}
+                                                                            </div>)
+                                                                    }
 
-                                                                        </div>
-
-                                                                    </div>
 
 
                                                                     {/* ============================= */}
                                                                     {/* BEADS */}
                                                                     {/* ============================= */}
 
-                                                                    <div className="flex w-full border-b border-zinc-200 bg-zinc-100">
+                                                                    {
+                                                                        item.beadDetails && (
+                                                                            <div className="grid grid-cols-[64px_minmax(0,1fr)] w-full border-b border-zinc-200 bg-zinc-100 min-w-0">
 
-                                                                        <div className="px-1.5 py-0.5 font-bold text-zinc-950 w-24 shrink-0">
-                                                                            Beads
-                                                                        </div>
+                                                                                <div className="px-1.5 py-0.5 font-bold text-zinc-950 whitespace-nowrap">
+                                                                                    Beads
+                                                                                </div>
 
-                                                                        <div className="px-1.5 py-0.5 text-zinc-700 flex-1 font-medium">
+                                                                                <div className="px-1.5 py-0.5 text-zinc-700 min-w-0 font-medium overflow-hidden">
 
-                                                                            {item.beadDetails ? (
+                                                                                    {item.beadDetails ? (
 
-                                                                                <div className="flex flex-col">
+                                                                                        <div className="flex flex-col">
 
-                                                                                    {(Array.isArray(item.beadDetails)
-                                                                                        ? item.beadDetails
-                                                                                        : [item.beadDetails]
-                                                                                    ).map((bead, index) => (
+                                                                                            {(Array.isArray(item.beadDetails)
+                                                                                                ? item.beadDetails
+                                                                                                : [item.beadDetails]
+                                                                                            ).map((bead, index) => (
 
-                                                                                        <div
-                                                                                            key={index}
-                                                                                            className="flex justify-between items-center"
-                                                                                        >
+                                                                                                <div
+                                                                                                    key={index}
+                                                                                                    className="flex justify-between items-center"
+                                                                                                >
 
-                                                                                            <span>
-                                                                                                {bead.name || "Bead"} -{" "}
-                                                                                                {bead.weight ?? 0} ct
-                                                                                            </span>
+                                                                                                    <span>
+                                                                                                        {bead.name || "Bead"} -{" "}
+                                                                                                        {bead.weight ?? 0} ct
+                                                                                                    </span>
 
-                                                                                            <span className="font-mono font-semibold whitespace-nowrap">
-                                                                                                Rs{" "}
-                                                                                                {formatCurrency(
-                                                                                                    Number(bead.price) || 0
-                                                                                                )}
-                                                                                            </span>
+                                                                                                    <span className="font-mono font-semibold whitespace-nowrap shrink-0">
+                                                                                                        Rs{" "}
+                                                                                                        {formatCurrency(
+                                                                                                            Number(bead.price) || 0
+                                                                                                        )}
+                                                                                                    </span>
+
+                                                                                                </div>
+
+                                                                                            ))}
+
+                                                                                            {/* Total Bead Price */}
+                                                                                            <div className="border-t border-zinc-300 mt-0.5 pt-0.5 flex justify-between font-bold text-zinc-950">
+
+                                                                                                <span>
+                                                                                                    Total Bead Price
+                                                                                                </span>
+
+                                                                                                <span className="font-mono whitespace-nowrap">
+                                                                                                    Rs{" "}
+                                                                                                    {formatCurrency(
+                                                                                                        (
+                                                                                                            Array.isArray(
+                                                                                                                item.beadDetails
+                                                                                                            )
+                                                                                                                ? item.beadDetails
+                                                                                                                : [item.beadDetails]
+                                                                                                        ).reduce(
+                                                                                                            (total, bead) =>
+                                                                                                                total +
+                                                                                                                (Number(bead.price) || 0),
+                                                                                                            0
+                                                                                                        )
+                                                                                                    )}
+                                                                                                </span>
+
+                                                                                            </div>
 
                                                                                         </div>
 
-                                                                                    ))}
-
-                                                                                    {/* Total Bead Price */}
-                                                                                    <div className="border-t border-zinc-300 mt-0.5 pt-0.5 flex justify-between font-bold text-zinc-950">
-
-                                                                                        <span>
-                                                                                            Total Bead Price
-                                                                                        </span>
-
-                                                                                        <span className="font-mono whitespace-nowrap">
-                                                                                            Rs{" "}
-                                                                                            {formatCurrency(
-                                                                                                (
-                                                                                                    Array.isArray(
-                                                                                                        item.beadDetails
-                                                                                                    )
-                                                                                                        ? item.beadDetails
-                                                                                                        : [item.beadDetails]
-                                                                                                ).reduce(
-                                                                                                    (total, bead) =>
-                                                                                                        total +
-                                                                                                        (Number(bead.price) || 0),
-                                                                                                    0
-                                                                                                )
-                                                                                            )}
-                                                                                        </span>
-
-                                                                                    </div>
+                                                                                    ) : (
+                                                                                        "—"
+                                                                                    )}
 
                                                                                 </div>
 
-                                                                            ) : (
-                                                                                "—"
-                                                                            )}
-
-                                                                        </div>
-
-                                                                    </div>
+                                                                            </div>)
+                                                                    }
 
 
                                                                     {/* ============================= */}
                                                                     {/* ITEM SUBTOTAL */}
                                                                     {/* ============================= */}
 
-                                                                    <div className="flex font-bold w-full text-zinc-950 py-0.5">
+                                                                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 font-bold w-full text-zinc-950 py-0.5 px-1.5 min-w-0">
 
-                                                                        <div className="px-1.5 flex-1 text-right uppercase tracking-tight text-[8px]">
-                                                                            Item Sub Total (Rs)
+                                                                        <div className="text-right uppercase tracking-tight text-[8px] min-w-0">
+                                                                            Item Total (Rs)
                                                                         </div>
 
-                                                                        <div className="px-1.5 text-right w-24 shrink-0 text-[10px] font-extrabold font-mono">
+                                                                        <div className="text-right text-[10px] font-extrabold font-mono whitespace-nowrap shrink-0">
                                                                             {formatCurrency(
                                                                                 Number(
                                                                                     item.peritemTotal ||
@@ -978,72 +958,100 @@ export const PrintInvoice = ({
 
                                 </div>
 
-                                {/* --- COMPACT TOTALS SECTION --- */}
-                                {isLastPage && (
-                                    <div className="w-full flex justify-end page-break-inside-avoid pt-0.5">
+                                {/* --- PAGE FINANCIAL SUMMARY --- */}
+                                {/* --- PAGE FINANCIAL SUMMARY --- */}
+                                {(() => {
+                                    // Total of only the items printed on this page
+                                    const pageTotalAmount = pageItems.reduce(
+                                        (sum, item) =>
+                                            sum +
+                                            (Number(item.peritemTotal || item.itemTotal) || 0),
+                                        0
+                                    );
 
-                                        <div className="w-[70mm] flex flex-col font-bold text-zinc-900 text-right text-[9.5px]">
+                                    /*
+                                     * IMPORTANT:
+                                     * `discount` is already the COMBINED invoice discount.
+                                     *
+                                     * Do NOT add item.discount here because that would
+                                     * double-count the discount.
+                                     */
+                                    const pageDiscount =
+                                        pageIdx === 0
+                                            ? Number(discount) || 0
+                                            : 0;
 
-                                            <div className="flex justify-between py-0.5 border-b border-zinc-300">
+                                    /*
+                                     * Advance:
+                                     * Use the invoice-level advance only once.
+                                     * If your `advance` prop already represents the complete
+                                     * invoice advance, do NOT also add item.advance.
+                                     */
+                                    const pageAdvance =
+                                        pageIdx === 0
+                                            ? Number(advance) || 0
+                                            : 0;
 
-                                                <span className="text-zinc-700 font-medium">
-                                                    Total Amount (Rs)
-                                                </span>
+                                    /*
+                                     * Net balance for this particular printed page.
+                                     */
+                                    const pageNetBalance =
+                                        pageTotalAmount -
+                                        pageAdvance -
+                                        pageDiscount;
 
-                                                <span className="text-[10px] font-black">
-                                                    {formatCurrency(
-                                                        primaryInvoiceSubTotal
-                                                    )}
-                                                </span>
+                                    return (
+                                        <div className="w-full flex justify-end page-break-inside-avoid pt-0.5">
+                                            <div className="w-[70mm] flex flex-col font-bold text-zinc-900 text-right text-[9.5px]">
+
+                                                {/* TOTAL AMOUNT */}
+                                                <div className="flex justify-between py-0.5 border-b border-zinc-300">
+                                                    <span className="text-zinc-700 font-medium">
+                                                        Total Amount (Rs)
+                                                    </span>
+
+                                                    <span className="text-[10px] font-black font-mono whitespace-nowrap">
+                                                        {formatCurrency(pageTotalAmount)}
+                                                    </span>
+                                                </div>
+
+                                                {/* ADVANCE */}
+                                                <div className="flex justify-between py-0.5 border-b border-zinc-300">
+                                                    <span className="text-zinc-700 font-medium">
+                                                        Advance Paid (Rs)
+                                                    </span>
+
+                                                    <span className="text-[10px] font-bold font-mono whitespace-nowrap">
+                                                        {formatCurrency(pageAdvance)}
+                                                    </span>
+                                                </div>
+
+                                                {/* DISCOUNT */}
+                                                <div className="flex justify-between py-0.5 border-b border-zinc-300">
+                                                    <span className="text-zinc-700 font-medium">
+                                                        Total Discount (Rs)
+                                                    </span>
+
+                                                    <span className="text-[10px] font-bold font-mono whitespace-nowrap">
+                                                        {formatCurrency(pageDiscount)}
+                                                    </span>
+                                                </div>
+
+                                                {/* NET BALANCE */}
+                                                <div className="flex justify-between py-0.5 border-b-[2px] border-double border-zinc-900 mt-0.5">
+                                                    <span className="text-zinc-950 font-extrabold text-[10px] uppercase tracking-tight">
+                                                        Net Balance (Rs)
+                                                    </span>
+
+                                                    <span className="text-[12px] font-black font-mono tracking-tight whitespace-nowrap">
+                                                        {formatCurrency(pageNetBalance)}
+                                                    </span>
+                                                </div>
 
                                             </div>
-
-                                            <div className="flex justify-between py-0.5 border-b border-zinc-300">
-
-                                                <span className="text-zinc-700 font-medium">
-                                                    Advance Paid (Rs)
-                                                </span>
-
-                                                <span className="text-[10px] font-bold">
-                                                    {formatCurrency(
-                                                        computedAdvance
-                                                    )}
-                                                </span>
-
-                                            </div>
-
-                                            <div className="flex justify-between py-0.5 border-b border-zinc-300">
-
-                                                <span className="text-zinc-700 font-medium">
-                                                    Total Discount (Rs)
-                                                </span>
-
-                                                <span className="text-[10px] font-bold">
-                                                    {formatCurrency(discount)}
-                                                </span>
-
-                                            </div>
-
-                                            <div className="flex justify-between py-0.5 border-b-[2px] border-double border-zinc-900 mt-0.5">
-
-                                                <span className="text-zinc-950 font-extrabold text-[10px] uppercase tracking-tight">
-                                                    Net Balance (Rs)
-                                                </span>
-
-                                                <span className="text-[12px] font-black tracking-tight">
-                                                    {formatCurrency(
-                                                        primaryInvoiceSubTotal -
-                                                        computedAdvance -
-                                                        discount
-                                                    )}
-                                                </span>
-
-                                            </div>
-
                                         </div>
-
-                                    </div>
-                                )}
+                                    );
+                                })()}
 
                             </div>
                         );
