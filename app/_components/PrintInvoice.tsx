@@ -214,6 +214,85 @@ export const PrintInvoice = ({
         return chunks;
     }, [processedCartItems]);
 
+    /*
+     * PAGE-BY-PAGE FINANCIAL ALLOCATION
+     *
+     * The invoice-level advance and discount are treated as balances
+     * that are consumed from page 1 onward.
+     *
+     * Example:
+     *   Invoice Advance = 9,891,653
+     *   Page 1 Total    = 5,415,315.49
+     *
+     * Page 1 uses 5,415,315.49 advance and leaves:
+     *   4,476,337.51
+     *
+     * The remaining advance is then available to page 2.
+     *
+     * Discount follows the same carry-forward logic, but it is applied
+     * only after the page's advance has been consumed.
+     *
+     * This also prevents negative Net Balance values.
+     *
+     * IMPORTANT:
+     * `advance` and `discount` are the invoice-level totals.
+     * We intentionally do NOT add `item.advance` or `item.discount`
+     * here, because doing so can double-count them.
+     */
+    const pageFinancialSummaries = useMemo(() => {
+        let remainingAdvance = Math.max(Number(advance) || 0, 0);
+        let remainingDiscount = Math.max(Number(discount) || 0, 0);
+
+        return cartPages.map((pageItems) => {
+            const pageTotalAmount = pageItems.reduce(
+                (sum, item) =>
+                    sum +
+                    (Number(item.peritemTotal || item.itemTotal) || 0),
+                0
+            );
+
+            // Consume available advance against this page first.
+            const pageAdvance = Math.min(
+                remainingAdvance,
+                pageTotalAmount
+            );
+
+            remainingAdvance -= pageAdvance;
+
+            // Never allow the amount after advance to become negative.
+            const amountAfterAdvance = Math.max(
+                pageTotalAmount - pageAdvance,
+                0
+            );
+
+            // Consume discount only from the amount still remaining
+            // after advance has been applied.
+            const pageDiscount = Math.min(
+                remainingDiscount,
+                amountAfterAdvance
+            );
+
+            remainingDiscount -= pageDiscount;
+
+            // Never display a negative balance.
+            const pageNetBalance = Math.floor(
+                Math.max(
+                    amountAfterAdvance - pageDiscount,
+                    0
+                )
+            );
+
+            return {
+                pageTotalAmount,
+                pageAdvance,
+                pageDiscount,
+                pageNetBalance,
+                remainingAdvance,
+                remainingDiscount,
+            };
+        });
+    }, [cartPages, advance, discount]);
+
     useEffect(() => {
         console.log(
             "=================== PRINT INVOICE INCOMING DATA DETECTOR ==================="
@@ -748,9 +827,7 @@ export const PrintInvoice = ({
 
                                                                                         </div>
 
-                                                                                    ) : (
-                                                                                        "—"
-                                                                                    )}
+                                                                                    ) : null}
 
                                                                                 </div>
 
@@ -826,9 +903,7 @@ export const PrintInvoice = ({
 
                                                                                         </div>
 
-                                                                                    ) : (
-                                                                                        "—"
-                                                                                    )}
+                                                                                    ) : null}
 
                                                                                 </div>
 
@@ -842,7 +917,12 @@ export const PrintInvoice = ({
                                                                     {/* ============================= */}
 
                                                                     {
-                                                                        item.beadDetails && (
+                                                                        item.beadDetails &&
+                                                                        (
+                                                                            Array.isArray(item.beadDetails)
+                                                                                ? item.beadDetails.length > 0
+                                                                                : true
+                                                                        ) && (
                                                                             <div className="grid grid-cols-[64px_minmax(0,1fr)] w-full border-b border-zinc-200 bg-zinc-100 min-w-0">
 
                                                                                 <div className="px-1.5 py-0.5 font-bold text-zinc-950 whitespace-nowrap">
@@ -910,9 +990,7 @@ export const PrintInvoice = ({
 
                                                                                         </div>
 
-                                                                                    ) : (
-                                                                                        "—"
-                                                                                    )}
+                                                                                    ) : null}
 
                                                                                 </div>
 
@@ -959,46 +1037,13 @@ export const PrintInvoice = ({
                                 </div>
 
                                 {/* --- PAGE FINANCIAL SUMMARY --- */}
-                                {/* --- PAGE FINANCIAL SUMMARY --- */}
                                 {(() => {
-                                    // Total of only the items printed on this page
-                                    const pageTotalAmount = pageItems.reduce(
-                                        (sum, item) =>
-                                            sum +
-                                            (Number(item.peritemTotal || item.itemTotal) || 0),
-                                        0
-                                    );
+                                    const summary =
+                                        pageFinancialSummaries[pageIdx];
 
-                                    /*
-                                     * IMPORTANT:
-                                     * `discount` is already the COMBINED invoice discount.
-                                     *
-                                     * Do NOT add item.discount here because that would
-                                     * double-count the discount.
-                                     */
-                                    const pageDiscount =
-                                        pageIdx === 0
-                                            ? Number(discount) || 0
-                                            : 0;
-
-                                    /*
-                                     * Advance:
-                                     * Use the invoice-level advance only once.
-                                     * If your `advance` prop already represents the complete
-                                     * invoice advance, do NOT also add item.advance.
-                                     */
-                                    const pageAdvance =
-                                        pageIdx === 0
-                                            ? Number(advance) || 0
-                                            : 0;
-
-                                    /*
-                                     * Net balance for this particular printed page.
-                                     */
-                                    const pageNetBalance =
-                                        pageTotalAmount -
-                                        pageAdvance -
-                                        pageDiscount;
+                                    if (!summary) {
+                                        return null;
+                                    }
 
                                     return (
                                         <div className="w-full flex justify-end page-break-inside-avoid pt-0.5">
@@ -1011,29 +1056,29 @@ export const PrintInvoice = ({
                                                     </span>
 
                                                     <span className="text-[10px] font-black font-mono whitespace-nowrap">
-                                                        {formatCurrency(pageTotalAmount)}
+                                                        {formatCurrency(summary.pageTotalAmount)}
                                                     </span>
                                                 </div>
 
-                                                {/* ADVANCE */}
+                                                {/* ADVANCE USED FOR THIS PAGE */}
                                                 <div className="flex justify-between py-0.5 border-b border-zinc-300">
                                                     <span className="text-zinc-700 font-medium">
                                                         Advance Paid (Rs)
                                                     </span>
 
                                                     <span className="text-[10px] font-bold font-mono whitespace-nowrap">
-                                                        {formatCurrency(pageAdvance)}
+                                                        {formatCurrency(summary.pageAdvance)}
                                                     </span>
                                                 </div>
 
-                                                {/* DISCOUNT */}
+                                                {/* DISCOUNT USED FOR THIS PAGE */}
                                                 <div className="flex justify-between py-0.5 border-b border-zinc-300">
                                                     <span className="text-zinc-700 font-medium">
                                                         Total Discount (Rs)
                                                     </span>
 
                                                     <span className="text-[10px] font-bold font-mono whitespace-nowrap">
-                                                        {formatCurrency(pageDiscount)}
+                                                        {formatCurrency(summary.pageDiscount)}
                                                     </span>
                                                 </div>
 
@@ -1044,7 +1089,7 @@ export const PrintInvoice = ({
                                                     </span>
 
                                                     <span className="text-[12px] font-black font-mono tracking-tight whitespace-nowrap">
-                                                        {formatCurrency(pageNetBalance)}
+                                                        {formatCurrency(summary.pageNetBalance)}
                                                     </span>
                                                 </div>
 
