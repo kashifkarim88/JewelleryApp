@@ -159,32 +159,43 @@ export const PrintInvoice = ({
         return Number((details as DetailItem).weight) || 0;
     };
 
-    const uniqueRatesToShow = useMemo(() => {
-        return cart.filter(
-            (item, index, self) =>
-                index ===
-                self.findIndex(
-                    (t) => (t.carat || t.metal) === (item.carat || item.metal)
-                )
+    const getDetailsArray = (
+        details: DetailItem | DetailItem[] | undefined | null
+    ): DetailItem[] => {
+        if (!details) return [];
+        return Array.isArray(details) ? details : [details];
+    };
+
+    const sumDetailsPrice = (
+        details: DetailItem | DetailItem[] | undefined | null
+    ): number => {
+        return getDetailsArray(details).reduce(
+            (total, detail) => total + (Number(detail?.price) || 0),
+            0
         );
-    }, [cart]);
+    };
 
     const processedCartItems = useMemo((): ProcessedCartItem[] => {
         return cart.map((item) => {
             const netW = Number(item.netWeight) || 0;
 
             const wasteW = item.wastageGram
-                ? Number(item.wastageGram)
+                ? Number(item.wastageGram) || 0
                 : (netW * (Number(item.wastagePercent) || 0)) / 100;
 
             const grossMetalWeight = netW + wasteW;
 
+            // One combined total for stones + diamonds + beads.
             const stonePrice =
-                Number(item.stonesTotal || item.stonePrice) || 0;
+                sumDetailsPrice(item.stoneDetails) +
+                sumDetailsPrice(item.diamondDetails) +
+                sumDetailsPrice(item.beadDetails);
 
-            const absoluteMetalPrice =
-                (Number(item.peritemTotal || item.itemTotal) || 0) -
-                stonePrice;
+            const itemTotal =
+                Number(item.peritemTotal ?? item.itemTotal) || 0;
+
+            // Remove all non-metal additions from the item total.
+            const absoluteMetalPrice = itemTotal - stonePrice;
 
             const structuralAccentsWeight =
                 sumDetailsWeight(item.diamondDetails) +
@@ -736,7 +747,7 @@ export const PrintInvoice = ({
                                                                         {/* Sub Total - Row 1 */}
                                                                         <div className="grid grid-cols-[minmax(70px,1fr)_auto] items-center gap-2 px-1.5 py-0.5 min-w-0">
                                                                             <div className="font-bold text-zinc-950 whitespace-nowrap">
-                                                                                Sub Totals
+                                                                                Sub Total
                                                                             </div>
 
                                                                             <div className="text-right font-mono font-semibold whitespace-nowrap shrink-0">
@@ -804,26 +815,7 @@ export const PrintInvoice = ({
 
                                                                                             ))}
 
-                                                                                            {/* Total Stone Price */}
-                                                                                            <div className="border-t border-zinc-300 mt-0.5 pt-0.5 flex justify-between font-bold text-zinc-950">
 
-                                                                                                <span>
-                                                                                                    Total Stone Price
-                                                                                                </span>
-
-                                                                                                <span className="font-mono whitespace-nowrap">
-                                                                                                    Rs{" "}
-                                                                                                    {formatCurrency(
-                                                                                                        item.stoneDetails.reduce(
-                                                                                                            (total, stone) =>
-                                                                                                                total +
-                                                                                                                (Number(stone.price) || 0),
-                                                                                                            0
-                                                                                                        )
-                                                                                                    )}
-                                                                                                </span>
-
-                                                                                            </div>
 
                                                                                         </div>
 
@@ -880,26 +872,7 @@ export const PrintInvoice = ({
                                                                                                 )
                                                                                             )}
 
-                                                                                            {/* Total Diamond Price */}
-                                                                                            <div className="border-t border-zinc-300 mt-0.5 pt-0.5 flex justify-between font-bold text-zinc-950">
 
-                                                                                                <span>
-                                                                                                    Total Diamond Price
-                                                                                                </span>
-
-                                                                                                <span className="font-mono whitespace-nowrap">
-                                                                                                    Rs{" "}
-                                                                                                    {formatCurrency(
-                                                                                                        item.diamondDetails.reduce(
-                                                                                                            (total, diamond) =>
-                                                                                                                total +
-                                                                                                                (Number(diamond.price) || 0),
-                                                                                                            0
-                                                                                                        )
-                                                                                                    )}
-                                                                                                </span>
-
-                                                                                            </div>
 
                                                                                         </div>
 
@@ -961,32 +934,7 @@ export const PrintInvoice = ({
 
                                                                                             ))}
 
-                                                                                            {/* Total Bead Price */}
-                                                                                            <div className="border-t border-zinc-300 mt-0.5 pt-0.5 flex justify-between font-bold text-zinc-950">
 
-                                                                                                <span>
-                                                                                                    Total Bead Price
-                                                                                                </span>
-
-                                                                                                <span className="font-mono whitespace-nowrap">
-                                                                                                    Rs{" "}
-                                                                                                    {formatCurrency(
-                                                                                                        (
-                                                                                                            Array.isArray(
-                                                                                                                item.beadDetails
-                                                                                                            )
-                                                                                                                ? item.beadDetails
-                                                                                                                : [item.beadDetails]
-                                                                                                        ).reduce(
-                                                                                                            (total, bead) =>
-                                                                                                                total +
-                                                                                                                (Number(bead.price) || 0),
-                                                                                                            0
-                                                                                                        )
-                                                                                                    )}
-                                                                                                </span>
-
-                                                                                            </div>
 
                                                                                         </div>
 
@@ -997,6 +945,22 @@ export const PrintInvoice = ({
                                                                             </div>)
                                                                     }
 
+
+                                                                    {/* ============================= */}
+                                                                    {/* COMBINED STONES TOTAL */}
+                                                                    {/* ============================= */}
+
+                                                                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 font-bold w-full text-zinc-950 py-0.5 px-1.5 border-t border-zinc-300 min-w-0">
+
+                                                                        <div className="uppercase tracking-tight text-[8px] min-w-0">
+                                                                            Stones Total (Rs)
+                                                                        </div>
+
+                                                                        <div className="text-right text-[10px] font-extrabold font-mono whitespace-nowrap shrink-0">
+                                                                            {formatCurrency(item.stonePrice)}
+                                                                        </div>
+
+                                                                    </div>
 
                                                                     {/* ============================= */}
                                                                     {/* ITEM SUBTOTAL */}
@@ -1011,10 +975,9 @@ export const PrintInvoice = ({
                                                                         <div className="text-right text-[10px] font-extrabold font-mono whitespace-nowrap shrink-0">
                                                                             {formatCurrency(
                                                                                 Number(
-                                                                                    item.peritemTotal ||
-                                                                                    item.itemTotal ||
-                                                                                    0
-                                                                                )
+                                                                                    item.peritemTotal ??
+                                                                                    item.itemTotal
+                                                                                ) || 0
                                                                             )}
                                                                         </div>
 
