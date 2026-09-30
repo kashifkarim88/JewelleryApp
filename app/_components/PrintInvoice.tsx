@@ -94,69 +94,27 @@ export const PrintInvoice = ({
     ]);
 
     const getItemRate = (item: CartItem): number => {
-        const caratKey = item.carat
-            ? String(item.carat).toLowerCase().trim()
-            : '';
+        const caratKey = item.carat ? String(item.carat).toLowerCase().trim() : '';
+        const metalKey = item.metal ? String(item.metal).toLowerCase().trim() : '';
 
-        const metalKey = item.metal
-            ? String(item.metal).toLowerCase().trim()
-            : '';
+        // Check noble metals first
+        if (metalKey === 'palladium' || caratKey === 'palladium') return Number(ratePalladium) || 0;
+        if (metalKey === 'silver' || caratKey === 'silver') return Number(rateSilver) || 0;
+        if (metalKey === 'platinum' || caratKey === 'platinum') return Number(ratePlatinum) || 0;
 
-        if (
-            ['palladium', 'silver', 'platinum'].includes(metalKey) ||
-            ['palladium', 'silver', 'platinum'].includes(caratKey)
-        ) {
-            if (metalKey === 'palladium' || caratKey === 'palladium') {
-                return Number(ratePalladium) || 0;
-            }
+        // Exact match from lookup table
+        if (rateLookup[caratKey]) return rateLookup[caratKey];
+        if (rateLookup[metalKey]) return rateLookup[metalKey];
 
-            if (metalKey === 'silver' || caratKey === 'silver') {
-                return Number(rateSilver) || 0;
-            }
+        // Fallback karat extraction logic
+        if (caratKey.includes('24')) return Number(rate24ct) || 0;
+        if (caratKey.includes('22')) return Number(rate22ct) || 0;
+        if (caratKey.includes('21')) return Number(rate21ct) || 0;
+        if (caratKey.includes('20')) return Number(rate20ct) || 0;
+        if (caratKey.includes('18')) return Number(rate18ct) || 0;
+        if (caratKey.includes('14')) return Number(rate14ct) || 0;
 
-            if (metalKey === 'platinum' || caratKey === 'platinum') {
-                return Number(ratePlatinum) || 0;
-            }
-        }
-
-        if (rateLookup[caratKey]) {
-            return rateLookup[caratKey];
-        }
-
-        if (metalKey === 'gold') {
-            if (caratKey.includes('21')) {
-                return Number(rate21ct) || 0;
-            }
-
-            if (caratKey.includes('22')) {
-                return Number(rate22ct) || 0;
-            }
-
-            if (caratKey.includes('24')) {
-                return Number(rate24ct) || 0;
-            }
-
-            if (caratKey.includes('18')) {
-                return Number(rate18ct) || 0;
-            }
-        }
-
-        return rateLookup[metalKey] || 0;
-    };
-
-    const sumDetailsWeight = (
-        details: DetailItem | DetailItem[] | undefined | null
-    ): number => {
-        if (!details) return 0;
-
-        if (Array.isArray(details)) {
-            return details.reduce(
-                (acc, current) => acc + (Number(current?.weight) || 0),
-                0
-            );
-        }
-
-        return Number((details as DetailItem).weight) || 0;
+        return 0;
     };
 
     const getDetailsArray = (
@@ -164,6 +122,15 @@ export const PrintInvoice = ({
     ): DetailItem[] => {
         if (!details) return [];
         return Array.isArray(details) ? details : [details];
+    };
+
+    const sumDetailsWeight = (
+        details: DetailItem | DetailItem[] | undefined | null
+    ): number => {
+        return getDetailsArray(details).reduce(
+            (acc, current) => acc + (Number(current?.weight) || 0),
+            0
+        );
     };
 
     const sumDetailsPrice = (
@@ -179,7 +146,7 @@ export const PrintInvoice = ({
         return cart.map((item) => {
             const netW = Number(item.netWeight) || 0;
 
-            const wasteW = item.wastageGram
+            const wasteW = item.wastageGram !== undefined && item.wastageGram !== null && item.wastageGram !== ''
                 ? Number(item.wastageGram) || 0
                 : (netW * (Number(item.wastagePercent) || 0)) / 100;
 
@@ -225,31 +192,6 @@ export const PrintInvoice = ({
         return chunks;
     }, [processedCartItems]);
 
-    /*
-     * PAGE-BY-PAGE FINANCIAL ALLOCATION
-     *
-     * The invoice-level advance and discount are treated as balances
-     * that are consumed from page 1 onward.
-     *
-     * Example:
-     *   Invoice Advance = 9,891,653
-     *   Page 1 Total    = 5,415,315.49
-     *
-     * Page 1 uses 5,415,315.49 advance and leaves:
-     *   4,476,337.51
-     *
-     * The remaining advance is then available to page 2.
-     *
-     * Discount follows the same carry-forward logic, but it is applied
-     * only after the page's advance has been consumed.
-     *
-     * This also prevents negative Net Balance values.
-     *
-     * IMPORTANT:
-     * `advance` and `discount` are the invoice-level totals.
-     * We intentionally do NOT add `item.advance` or `item.discount`
-     * here, because doing so can double-count them.
-     */
     const pageFinancialSummaries = useMemo(() => {
         let remainingAdvance = Math.max(Number(advance) || 0, 0);
         let remainingDiscount = Math.max(Number(discount) || 0, 0);
@@ -352,11 +294,14 @@ export const PrintInvoice = ({
     ]);
 
     const formattedDate = useMemo(() => {
-        return new Date().toLocaleDateString('en-GB', {
+        return new Date().toLocaleString('en-GB', {
             weekday: 'long',
             day: 'numeric',
             month: 'long',
-            year: 'numeric'
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
         });
     }, []);
 
@@ -402,7 +347,7 @@ export const PrintInvoice = ({
                 position: relative;
                 width: 100%;
                 box-sizing: border-box;
-                padding-top: 5.3cm; 
+                padding-top: 3.9cm; 
               }
               
               tr { 
@@ -420,16 +365,13 @@ export const PrintInvoice = ({
 
                     {/* --- CART ITEMS PAGE ENGINE --- */}
                     {cartPages.map((pageItems, pageIdx) => {
-                        // Each printed page contains exactly two items (or one on the final page).
-                        // Financial totals below are calculated only from this page's items.
-
                         return (
                             <div
                                 key={pageIdx}
                                 className="print-page flex flex-col space-y-2 w-full min-h-0"
                             >
 
-                                {/* --- HEADER BLOCK (RENDERED ON EVERY PAGE) --- */}
+                                {/* --- HEADER BLOCK --- */}
                                 <>
                                     <div className="flex justify-between items-start w-full">
 
@@ -460,7 +402,7 @@ export const PrintInvoice = ({
                                         <div className="text-right pt-0.5">
                                             <p className="text-[10px] font-medium">
                                                 <span className="font-bold text-zinc-900">
-                                                    Date:
+                                                    Printed On:
                                                 </span>{" "}
                                                 {formattedDate}
                                             </p>
@@ -524,48 +466,37 @@ export const PrintInvoice = ({
                                                             index ===
                                                             self.findIndex(
                                                                 (t) =>
-                                                                    (t.carat || t.metal) ===
-                                                                    (item.carat || item.metal)
+                                                                    `${(t.metal || '').toLowerCase()}-${(t.carat || '').toLowerCase()}` ===
+                                                                    `${(item.metal || '').toLowerCase()}-${(item.carat || '').toLowerCase()}`
                                                             )
                                                     )
                                                     .map((item, idx) => {
-
-                                                        const computedRate =
-                                                            getItemRate(item);
-
+                                                        const computedRate = getItemRate(item);
                                                         return (
                                                             <div
                                                                 key={idx}
                                                                 className="flex items-center justify-between border-b border-zinc-100 pb-0.5 last:border-0 last:pb-0 w-full"
                                                             >
-
                                                                 <div className="flex items-baseline space-x-1 w-[30mm]">
-
                                                                     <span className="font-bold text-zinc-900 text-[8.5px] tracking-tight">
-                                                                        {item.carat ||
-                                                                            item.metal ||
-                                                                            "Item"}
+                                                                        {item.metal?.toLowerCase() === 'gold' || !item.metal
+                                                                            ? item.carat || "Gold"
+                                                                            : item.metal}
                                                                     </span>
-
                                                                     <span className="text-[7.5px] font-medium text-zinc-400 lowercase tracking-tight">
                                                                         ({item.metal || "Gold"})
                                                                     </span>
-
                                                                 </div>
 
                                                                 <div className="flex-1 text-right">
-
                                                                     <span className="text-[8.5px] font-bold text-zinc-700 font-mono tracking-tight">
                                                                         {computedRate > 0
                                                                             ? `Rs ${formatCurrency(computedRate)}`
                                                                             : "—"}
                                                                     </span>
-
                                                                 </div>
-
                                                             </div>
                                                         );
-
                                                     })}
 
                                             </div>
@@ -738,13 +669,10 @@ export const PrintInvoice = ({
                                                                 className="p-0 align-top min-w-0 overflow-hidden"
                                                             >
                                                                 <div className="w-full min-w-0 flex flex-col font-medium py-0.5 text-zinc-900 overflow-hidden">
-                                                                    {/* ============================= */}
-                                                                    {/* GOLD / METAL ROW */}
-                                                                    {/* ============================= */}
 
+                                                                    {/* GOLD / METAL ROW */}
                                                                     <div className="w-full border-b border-zinc-200 bg-zinc-100 min-w-0">
 
-                                                                        {/* Sub Total - Row 1 */}
                                                                         <div className="grid grid-cols-[minmax(70px,1fr)_auto] items-center gap-2 px-1.5 py-0.5 min-w-0">
                                                                             <div className="font-bold text-zinc-950 whitespace-nowrap">
                                                                                 Sub Total
@@ -758,7 +686,6 @@ export const PrintInvoice = ({
                                                                             </div>
                                                                         </div>
 
-                                                                        {/* Making - Row 2 */}
                                                                         <div className="grid grid-cols-[minmax(70px,1fr)_auto] items-center gap-2 px-1.5 py-0.5 min-w-0 border-t border-zinc-200">
                                                                             <div className="font-bold text-zinc-950 whitespace-nowrap">
                                                                                 Making
@@ -771,12 +698,7 @@ export const PrintInvoice = ({
 
                                                                     </div>
 
-
-
-
-                                                                    {/* ============================= */}
                                                                     {/* STONES */}
-                                                                    {/* ============================= */}
                                                                     {
                                                                         item.stoneDetails && item.stoneDetails.length > 0 && (
                                                                             <div className="grid grid-cols-[64px_minmax(0,1fr)] w-full border-b border-zinc-200 bg-zinc-100 min-w-0">
@@ -787,51 +709,39 @@ export const PrintInvoice = ({
 
                                                                                 <div className="px-1.5 py-0.5 text-zinc-700 min-w-0 font-medium overflow-hidden">
 
-                                                                                    {item.stoneDetails &&
-                                                                                        item.stoneDetails.length > 0 ? (
+                                                                                    <div className="flex flex-col">
 
-                                                                                        <div className="flex flex-col">
+                                                                                        {getDetailsArray(item.stoneDetails).map((stone, index) => (
 
-                                                                                            {item.stoneDetails.map((stone, index) => (
+                                                                                            <div
+                                                                                                key={index}
+                                                                                                className="flex justify-between items-center"
+                                                                                            >
 
-                                                                                                <div
-                                                                                                    key={index}
-                                                                                                    className="flex justify-between items-center"
-                                                                                                >
+                                                                                                <span>
+                                                                                                    {stone.name || "Unknown Stone"} -{" "}
+                                                                                                    {stone.weight ?? 0} ct
+                                                                                                </span>
 
-                                                                                                    <span>
-                                                                                                        {stone.name || "Unknown Stone"} -{" "}
-                                                                                                        {stone.weight ?? 0} ct
-                                                                                                    </span>
+                                                                                                <span className="font-mono font-semibold whitespace-nowrap shrink-0">
+                                                                                                    Rs{" "}
+                                                                                                    {formatCurrency(
+                                                                                                        Number(stone.price) || 0
+                                                                                                    )}
+                                                                                                </span>
 
-                                                                                                    <span className="font-mono font-semibold whitespace-nowrap shrink-0">
-                                                                                                        Rs{" "}
-                                                                                                        {formatCurrency(
-                                                                                                            Number(stone.price) || 0
-                                                                                                        )}
-                                                                                                    </span>
+                                                                                            </div>
 
-                                                                                                </div>
+                                                                                        ))}
 
-                                                                                            ))}
-
-
-
-                                                                                        </div>
-
-                                                                                    ) : null}
+                                                                                    </div>
 
                                                                                 </div>
 
                                                                             </div>)
                                                                     }
 
-
-
-                                                                    {/* ============================= */}
                                                                     {/* DIAMONDS */}
-                                                                    {/* ============================= */}
-
                                                                     {
                                                                         item.diamondDetails && item.diamondDetails.length > 0 && (
                                                                             <div className="grid grid-cols-[64px_minmax(0,1fr)] w-full border-b border-zinc-200 bg-zinc-100 min-w-0">
@@ -842,53 +752,41 @@ export const PrintInvoice = ({
 
                                                                                 <div className="px-1.5 py-0.5 text-zinc-700 min-w-0 font-medium overflow-hidden">
 
-                                                                                    {item.diamondDetails &&
-                                                                                        item.diamondDetails.length > 0 ? (
+                                                                                    <div className="flex flex-col">
 
-                                                                                        <div className="flex flex-col">
+                                                                                        {getDetailsArray(item.diamondDetails).map(
+                                                                                            (diamond, index) => (
 
-                                                                                            {item.diamondDetails.map(
-                                                                                                (diamond, index) => (
+                                                                                                <div
+                                                                                                    key={index}
+                                                                                                    className="flex justify-between items-center"
+                                                                                                >
 
-                                                                                                    <div
-                                                                                                        key={index}
-                                                                                                        className="flex justify-between items-center"
-                                                                                                    >
+                                                                                                    <span>
+                                                                                                        {diamond.name || "Diamond"} -{" "}
+                                                                                                        {diamond.weight ?? 0} ct
+                                                                                                    </span>
 
-                                                                                                        <span>
-                                                                                                            {diamond.name || "Diamond"} -{" "}
-                                                                                                            {diamond.weight ?? 0} ct
-                                                                                                        </span>
+                                                                                                    <span className="font-mono font-semibold whitespace-nowrap shrink-0">
+                                                                                                        Rs{" "}
+                                                                                                        {formatCurrency(
+                                                                                                            Number(diamond.price) || 0
+                                                                                                        )}
+                                                                                                    </span>
 
-                                                                                                        <span className="font-mono font-semibold whitespace-nowrap shrink-0">
-                                                                                                            Rs{" "}
-                                                                                                            {formatCurrency(
-                                                                                                                Number(diamond.price) || 0
-                                                                                                            )}
-                                                                                                        </span>
+                                                                                                </div>
 
-                                                                                                    </div>
+                                                                                            )
+                                                                                        )}
 
-                                                                                                )
-                                                                                            )}
-
-
-
-                                                                                        </div>
-
-                                                                                    ) : null}
+                                                                                    </div>
 
                                                                                 </div>
 
                                                                             </div>)
                                                                     }
 
-
-
-                                                                    {/* ============================= */}
                                                                     {/* BEADS */}
-                                                                    {/* ============================= */}
-
                                                                     {
                                                                         item.beadDetails &&
                                                                         (
@@ -904,53 +802,40 @@ export const PrintInvoice = ({
 
                                                                                 <div className="px-1.5 py-0.5 text-zinc-700 min-w-0 font-medium overflow-hidden">
 
-                                                                                    {item.beadDetails ? (
+                                                                                    <div className="flex flex-col">
 
-                                                                                        <div className="flex flex-col">
+                                                                                        {getDetailsArray(item.beadDetails).map((bead, index) => (
 
-                                                                                            {(Array.isArray(item.beadDetails)
-                                                                                                ? item.beadDetails
-                                                                                                : [item.beadDetails]
-                                                                                            ).map((bead, index) => (
+                                                                                            <div
+                                                                                                key={index}
+                                                                                                className="flex justify-between items-center"
+                                                                                            >
 
-                                                                                                <div
-                                                                                                    key={index}
-                                                                                                    className="flex justify-between items-center"
-                                                                                                >
+                                                                                                <span>
+                                                                                                    {bead.name || "Bead"} -{" "}
+                                                                                                    {bead.weight ?? 0} ct
+                                                                                                </span>
 
-                                                                                                    <span>
-                                                                                                        {bead.name || "Bead"} -{" "}
-                                                                                                        {bead.weight ?? 0} ct
-                                                                                                    </span>
+                                                                                                <span className="font-mono font-semibold whitespace-nowrap shrink-0">
+                                                                                                    Rs{" "}
+                                                                                                    {formatCurrency(
+                                                                                                        Number(bead.price) || 0
+                                                                                                    )}
+                                                                                                </span>
 
-                                                                                                    <span className="font-mono font-semibold whitespace-nowrap shrink-0">
-                                                                                                        Rs{" "}
-                                                                                                        {formatCurrency(
-                                                                                                            Number(bead.price) || 0
-                                                                                                        )}
-                                                                                                    </span>
+                                                                                            </div>
 
-                                                                                                </div>
+                                                                                        ))}
 
-                                                                                            ))}
-
-
-
-                                                                                        </div>
-
-                                                                                    ) : null}
+                                                                                    </div>
 
                                                                                 </div>
 
                                                                             </div>)
                                                                     }
 
-
-                                                                    {/* ============================= */}
                                                                     {/* COMBINED STONES TOTAL */}
-                                                                    {/* ============================= */}
-
-                                                                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 font-bold w-full text-zinc-950 py-0.5 px-1.5 border-t border-zinc-300 min-w-0">
+                                                                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 font-bold w-full bg-zinc-100 text-zinc-950 py-0.5 px-1.5 border-t border-zinc-300 min-w-0">
 
                                                                         <div className="uppercase tracking-tight text-[8px] min-w-0">
                                                                             Stones Total (Rs)
@@ -962,17 +847,14 @@ export const PrintInvoice = ({
 
                                                                     </div>
 
-                                                                    {/* ============================= */}
                                                                     {/* ITEM SUBTOTAL */}
-                                                                    {/* ============================= */}
+                                                                    <div className="flex justify-between w-full bg-zinc-300 text-zinc-950 py-0.5 px-1.5 min-w-0">
 
-                                                                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 font-bold w-full text-zinc-950 py-0.5 px-1.5 min-w-0">
-
-                                                                        <div className="text-right uppercase tracking-tight text-[8px] min-w-0">
+                                                                        <div className="text-right uppercase tracking-tight text-[8px] min-w-0 py-1 font-bold">
                                                                             Item Total (Rs)
                                                                         </div>
 
-                                                                        <div className="text-right text-[10px] font-extrabold font-mono whitespace-nowrap shrink-0">
+                                                                        <div className="text-right text-[10px] font-extrabold font-mono whitespace-nowrap shrink-0 py-1">
                                                                             {formatCurrency(
                                                                                 Number(
                                                                                     item.peritemTotal ??
@@ -1012,7 +894,6 @@ export const PrintInvoice = ({
                                         <div className="w-full flex justify-end page-break-inside-avoid pt-0.5">
                                             <div className="w-[70mm] flex flex-col font-bold text-zinc-900 text-right text-[9.5px]">
 
-                                                {/* TOTAL AMOUNT */}
                                                 <div className="flex justify-between py-0.5 border-b border-zinc-300">
                                                     <span className="text-zinc-700 font-medium">
                                                         Total Amount (Rs)
@@ -1023,7 +904,6 @@ export const PrintInvoice = ({
                                                     </span>
                                                 </div>
 
-                                                {/* ADVANCE USED FOR THIS PAGE */}
                                                 <div className="flex justify-between py-0.5 border-b border-zinc-300">
                                                     <span className="text-zinc-700 font-medium">
                                                         Advance Paid (Rs)
@@ -1034,7 +914,6 @@ export const PrintInvoice = ({
                                                     </span>
                                                 </div>
 
-                                                {/* DISCOUNT USED FOR THIS PAGE */}
                                                 <div className="flex justify-between py-0.5 border-b border-zinc-300">
                                                     <span className="text-zinc-700 font-medium">
                                                         Total Discount (Rs)
@@ -1045,7 +924,6 @@ export const PrintInvoice = ({
                                                     </span>
                                                 </div>
 
-                                                {/* NET BALANCE */}
                                                 <div className="flex justify-between py-0.5 border-b-[2px] border-double border-zinc-900 mt-0.5">
                                                     <span className="text-zinc-950 font-extrabold text-[10px] uppercase tracking-tight">
                                                         Net Balance (Rs)
