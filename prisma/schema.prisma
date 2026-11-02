@@ -25,6 +25,7 @@ model Customer {
 
 model Bill {
   billSerialNumber String     @id @map("bill_serial_number")
+  printOperationId String @unique @map("print_operation_id")
   customerId       String     @map("customer_id")
   customer         Customer   @relation(fields: [customerId], references: [id])
   sellerName       String?    @map("seller_name")

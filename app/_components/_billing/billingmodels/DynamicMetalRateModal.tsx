@@ -21,15 +21,9 @@ const DynamicMetalRateModal = ({
     onConfirm,
 }: DynamicMetalRateModalProps) => {
     if (!isOpen) return null;
-
-    // Safe extraction variable using optional fallback to prevent .toLowerCase() crash flags
     const normalizedLabel = (rateLabel || '').toLowerCase();
-
-    // Helper to check if the current target is an alternative metal vs standard gold carat
     const isPerGramMetal = ['silver', 'platinum'].includes(normalizedLabel);
     const isPalladium = normalizedLabel === 'palladium';
-
-    // Set layout badge copy dynamically
     const rateBadgeText = isPalladium ? "Rate / Ct" : isPerGramMetal ? "Rate / Gram" : "Rate / Tola";
 
     return (
